@@ -1,7 +1,17 @@
 # multilingual_note_taking_agent
 Voice AI
 
+# installed packages
+
+## backend
+- fastapi
+- openai-whisper
+
 # how to setup?
+
+## prerequisites
+- ffmpeg - installed locally
+- rust - installation maybe required for whisper - https://github.com/openai/whisper?tab=readme-ov-file#setup
 
 ## backend
 - `git clone <repo>`
