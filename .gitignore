@@ -1,2 +1,5 @@
 # for scratch sample files
 res/
+
+# model files
+gguf_models/

@@ -6,12 +6,14 @@ Voice AI
 ## backend
 - fastapi
 - openai-whisper
+- llama-cpp-python
 
 # how to setup?
 
 ## prerequisites
 - ffmpeg - installed locally
 - rust - installation maybe required for whisper - https://github.com/openai/whisper?tab=readme-ov-file#setup
+- download required models to `gguf_models/` dir in base repo
 
 ## backend
 - `git clone <repo>`
@@ -25,4 +27,4 @@ Voice AI
 
 ## backend
 - `cd <repo>/backend`
-- `fastapi run main.py`
+- `python main.py`
