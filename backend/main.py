@@ -7,6 +7,7 @@ from model.model import generate_notes_from_transcript
 
 import shutil
 import os
+from multiprocessing import Process, Queue
 
 app = FastAPI()
 
@@ -87,6 +88,73 @@ async def notes_from_transcription_text(input_data: TranscriptionInput):
         return {"notes": notes}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+def transcribe_worker(file_path, q):
+    from audio.audio import transcribe_mp3
+
+    result = transcribe_mp3(file_path)
+    q.put(result)
+
+
+def notes_worker(transcription, q):
+    from model.model import generate_notes_from_transcript
+
+    result = generate_notes_from_transcript(transcription)
+    q.put(result)
+
+
+@app.post("/api/transcribe-and-generate-notes/")
+async def transcribe_and_generate_notes(file: UploadFile = File()):
+    """
+    Does both transcription and notes generation, and returns both.
+    Usage:
+    ``sh
+    curl -X POST localhost:5000/api/transcribe-and-generate-notes/ \
+        -F "file=@voice_sample.mp3" \
+        -H "Content-Type: multipart/form-data"
+    ``
+    """
+    print(f"transcribe_and_generate_notes route called with {file=}")
+
+    if file.filename is None:
+        return JSONResponse(
+            status_code=400, content={"error": "filename cannot be None"}
+        )
+
+    file_path = os.path.join(UPLOAD_DIR, file.filename)
+
+    # Save file
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # Step 1: Run transcription in isolated process
+    transcribe_q = Queue()
+    transcribe_p = Process(target=transcribe_worker, args=(file_path, transcribe_q))
+    transcribe_p.start()
+    transcribe_p.join()
+
+    # Remove file
+    os.remove(file_path)
+
+    if not transcribe_q.empty():
+        transcription = transcribe_q.get()
+        print(f"got the transcription {transcription=}")
+    else:
+        raise HTTPException(status_code=500, detail="Transcription failed")
+
+    # Step 2: Run notes generation in isolated process
+    notes_q = Queue()
+    notes_p = Process(target=notes_worker, args=(transcription, notes_q))
+    notes_p.start()
+    notes_p.join()
+
+    if not notes_q.empty():
+        notes = notes_q.get()
+    else:
+        raise HTTPException(status_code=500, detail="Notes generation failed")
+
+    return {"transcription": transcription, "notes": notes}
 
 
 if __name__ == "__main__":
