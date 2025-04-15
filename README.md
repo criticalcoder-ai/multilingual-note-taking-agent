@@ -6,7 +6,9 @@ Voice AI
 ## backend
 - fastapi
 - openai-whisper
-- llama-cpp-python
+- llama-cpp-python (install with CUDA backend if possible - for best performance)
+    - https://github.com/abetlen/llama-cpp-python?tab=readme-ov-file#supported-backends
+    - https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md#cuda
 
 # how to setup?
 
@@ -22,6 +24,7 @@ Voice AI
 - `virtualenv venv` to create your new environment
 - `source venv/bin/activate` to enter the virtual environment(automatic if used direnv with envrc)
 - `pip install -r requirements.txt` to install the requirements in the current environment
+    - llama-cpp-python might need special reinstallation for setting up gpu backend correctly
 
 # how to run?
 

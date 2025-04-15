@@ -1,13 +1,13 @@
 from llama_cpp import Llama
 
 
-# TODO: i don't think this is using gpu yet - find how to setup for llama to use gpu correctly
 def generate_notes_from_transcript(transcript: str) -> str:
     llm = Llama(
         # model_path="../gguf_models/Qwen2.5-7B-Instruct-Q5_K_M/qwen2.5-7b-instruct-q5_k_m.gguf",
         model_path="../gguf_models/DeepSeek-R1-Distill-Llama-8B-Q4_K_M.gguf",
-        n_gpu_layers=40,  # Uncomment to use GPU acceleration
-        n_ctx=16384,  # Uncomment to increase the context window
+        # model_path="../gguf_models/DeepSeek-R1-Distill-Qwen-7B-Q5_K_M.gguf",
+        n_gpu_layers=32,  # Uncomment to use GPU acceleration
+        n_ctx=1024,  # Uncomment to increase the context window
         n_threads=8,  # Matches your 8-core CPU
         n_threads_batch=16,  # Utilize all 16 threads for batch processing
         n_batch=512,  # Good balance for GPU memory (RTX 2060)
@@ -24,7 +24,7 @@ def generate_notes_from_transcript(transcript: str) -> str:
         {transcript}
         ---
         A: """,  # Prompt
-        max_tokens=16384,  # Generate up to 32 tokens, set to None to generate up to the end of the context window
+        max_tokens=1024,  # Generate up to 32 tokens, set to None to generate up to the end of the context window
         stop=[
             "Q:",
             # "\n\n",
