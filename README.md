@@ -16,6 +16,7 @@ Voice AI
 - ffmpeg - installed locally
 - rust - installation maybe required for whisper - https://github.com/openai/whisper?tab=readme-ov-file#setup
 - download required models to `gguf_models/` dir in base repo
+- have alibaba asr keys in .env file for backend request for the model
 
 ## backend
 - `git clone <repo>`

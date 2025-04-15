@@ -2,12 +2,11 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from audio.audio import transcribe_mp3
-from model.model import generate_notes_from_transcript
-
 import shutil
 import os
 from multiprocessing import Process, Queue
+
+from audio.audio import TranscriptionMethod
 
 app = FastAPI()
 
@@ -23,24 +22,36 @@ UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
+def transcribe_worker(file_path, q):
+    from audio.audio import transcribe_mp3
+
+    result = transcribe_mp3(file_path)
+    q.put(result)
+
+
+def notes_worker(transcription, q):
+    from model.model import generate_notes_from_transcript
+
+    result = generate_notes_from_transcript(transcription)
+    q.put(result)
+
+
 @app.post("/api/transcribe-audio/")
-async def transcribe_audio(file: UploadFile = File()):
+async def transcribe_audio(
+    file: UploadFile = File(),
+    method: TranscriptionMethod = TranscriptionMethod.alibaba_asr_api,
+):
     """
     to check this route use this curl cmd with a sample file
     ``sh
     curl -X POST localhost:5000/api/transcribe-audio/ \
         -F "file=@voice_sample.mp3" \
+        -F "method=whisper" \
         -H "Content-Type: multipart/form-data"
     ``
     """
 
-    print(f"transcribe_audio route called with {file=}")
-
-    # TODO: by default its becoming application/octet-stream for mp3 files, so find how to do this correctly
-    # if file.content_type != "audio/mpeg":
-    #     return JSONResponse(
-    #         status_code=400, content={"error": "Only MP3 files are supported."}
-    #     )
+    print(f"transcribe_audio route called with {file=}, {method=}")
 
     if file.filename is None:
         return JSONResponse(
@@ -53,11 +64,20 @@ async def transcribe_audio(file: UploadFile = File()):
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    # Call your transcription function
-    transcription = transcribe_mp3(file_path)
+    # Step 1: Run transcription in isolated process
+    transcribe_q = Queue()
+    transcribe_p = Process(target=transcribe_worker, args=(file_path, transcribe_q))
+    transcribe_p.start()
+    transcribe_p.join()
 
-    # Optional: remove the file after transcription
+    # Remove file
     os.remove(file_path)
+
+    if not transcribe_q.empty():
+        transcription = transcribe_q.get()
+        print(f"got the transcription {transcription=}")
+    else:
+        raise HTTPException(status_code=500, detail="Transcription failed")
 
     return {"transcription": transcription}
 
@@ -81,27 +101,19 @@ async def notes_from_transcription_text(input_data: TranscriptionInput):
     """
     print(f"hello from route {input_data.transcription_text=}")
 
-    # TODO: probably try catch is not needed - check with llama later
-    # TODO: try to add timeout for this function, seems to fail easily, takes too long
-    try:
-        notes = generate_notes_from_transcript(input_data.transcription_text)
-        return {"notes": notes}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    notes_q = Queue()
+    notes_p = Process(
+        target=notes_worker, args=(input_data.transcription_text, notes_q)
+    )
+    notes_p.start()
+    notes_p.join()
 
+    if not notes_q.empty():
+        notes = notes_q.get()
+    else:
+        raise HTTPException(status_code=500, detail="Notes generation failed")
 
-def transcribe_worker(file_path, q):
-    from audio.audio import transcribe_mp3
-
-    result = transcribe_mp3(file_path)
-    q.put(result)
-
-
-def notes_worker(transcription, q):
-    from model.model import generate_notes_from_transcript
-
-    result = generate_notes_from_transcript(transcription)
-    q.put(result)
+    return {"notes": notes}
 
 
 @app.post("/api/transcribe-and-generate-notes/")
