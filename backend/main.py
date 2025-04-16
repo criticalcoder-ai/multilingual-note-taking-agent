@@ -7,6 +7,7 @@ import os
 from multiprocessing import Process, Queue
 
 from audio.audio import TranscriptionMethod
+from model.model import NotesMethod
 
 app = FastAPI()
 
@@ -22,17 +23,17 @@ UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
-def transcribe_worker(file_path, q):
+def transcribe_worker(q, file_path, method):
     from audio.audio import transcribe_mp3
 
-    result = transcribe_mp3(file_path)
+    result = transcribe_mp3(file_path, method)
     q.put(result)
 
 
-def notes_worker(transcription, q):
+def notes_worker(q, transcription, method):
     from model.model import generate_notes_from_transcript
 
-    result = generate_notes_from_transcript(transcription)
+    result = generate_notes_from_transcript(transcription, method)
     q.put(result)
 
 
@@ -46,7 +47,7 @@ async def transcribe_audio(
     ``sh
     curl -X POST localhost:5000/api/transcribe-audio/ \
         -F "file=@voice_sample.mp3" \
-        -F "method=whisper" \
+        -F "method=alibaba_asr_api" \
         -H "Content-Type: multipart/form-data"
     ``
     """
@@ -66,7 +67,9 @@ async def transcribe_audio(
 
     # Step 1: Run transcription in isolated process
     transcribe_q = Queue()
-    transcribe_p = Process(target=transcribe_worker, args=(file_path, transcribe_q))
+    transcribe_p = Process(
+        target=transcribe_worker, args=(transcribe_q, file_path, method)
+    )
     transcribe_p.start()
     transcribe_p.join()
 
@@ -88,14 +91,18 @@ class TranscriptionInput(BaseModel):
 
 
 @app.post("/api/notes-from-transcription-text")
-async def notes_from_transcription_text(input_data: TranscriptionInput):
+async def notes_from_transcription_text(
+    input_data: TranscriptionInput,
+    method: NotesMethod = NotesMethod.deepseek_openrouter_api,
+):
     """
-    to check
+    to check notes generation from transcription only
     ``sh
     curl -X POST localhost:5000/api/notes-from-transcription-text \
         -H 'Content-Type: application/json' \
         -d '{
-          "transcription_text": "jason, bond, momo, blah, blah"
+          "transcription_text": "jason, bond, momo, blah, blah",
+          "method": "deepseek_openrouter_api"
         }'
     ``
     """
@@ -103,7 +110,7 @@ async def notes_from_transcription_text(input_data: TranscriptionInput):
 
     notes_q = Queue()
     notes_p = Process(
-        target=notes_worker, args=(input_data.transcription_text, notes_q)
+        target=notes_worker, args=(notes_q, input_data.transcription_text, method)
     )
     notes_p.start()
     notes_p.join()
@@ -117,13 +124,19 @@ async def notes_from_transcription_text(input_data: TranscriptionInput):
 
 
 @app.post("/api/transcribe-and-generate-notes/")
-async def transcribe_and_generate_notes(file: UploadFile = File()):
+async def transcribe_and_generate_notes(
+    file: UploadFile = File(),
+    transcription_method: TranscriptionMethod = TranscriptionMethod.alibaba_asr_api,
+    notes_method: NotesMethod = NotesMethod.deepseek_openrouter_api,
+):
     """
     Does both transcription and notes generation, and returns both.
     Usage:
     ``sh
     curl -X POST localhost:5000/api/transcribe-and-generate-notes/ \
         -F "file=@voice_sample.mp3" \
+        -F "transcription_method=alibaba_asr_api" \
+        -F "notes_method=deepseek_openrouter_api" \
         -H "Content-Type: multipart/form-data"
     ``
     """
@@ -142,7 +155,9 @@ async def transcribe_and_generate_notes(file: UploadFile = File()):
 
     # Step 1: Run transcription in isolated process
     transcribe_q = Queue()
-    transcribe_p = Process(target=transcribe_worker, args=(file_path, transcribe_q))
+    transcribe_p = Process(
+        target=transcribe_worker, args=(transcribe_q, file_path, transcription_method)
+    )
     transcribe_p.start()
     transcribe_p.join()
 
@@ -157,7 +172,7 @@ async def transcribe_and_generate_notes(file: UploadFile = File()):
 
     # Step 2: Run notes generation in isolated process
     notes_q = Queue()
-    notes_p = Process(target=notes_worker, args=(transcription, notes_q))
+    notes_p = Process(target=notes_worker, args=(notes_q, transcription, notes_method))
     notes_p.start()
     notes_p.join()
 

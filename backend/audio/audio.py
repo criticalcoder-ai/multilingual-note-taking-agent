@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 # Enum for transcription method
 class TranscriptionMethod(str, Enum):
     whisper = "whisper"
-    alibaba_asr_api = "alibaba-asr-api"
+    alibaba_asr_api = "alibaba_asr_api"
 
 
 def transcribe_with_whisper(path: str) -> str:
