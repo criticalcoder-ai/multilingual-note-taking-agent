@@ -7,6 +7,7 @@ const App = () => {
       <ButtonAppBar />
       <h3>this is voice ai lorem ipsum</h3>
       <Button variant="contained">my button</Button>
+      <Button variant="contained">Transcribe</Button>
     </>
   );
 };

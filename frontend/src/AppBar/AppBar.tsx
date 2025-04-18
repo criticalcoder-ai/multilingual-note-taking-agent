@@ -23,7 +23,7 @@ const ButtonAppBar = () => {
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             Voice AI
           </Typography>
-          <Button color="inherit">Login(Dummy)</Button>
+          <Button color="inherit">Login (Dummy)</Button>
         </Toolbar>
       </AppBar>
     </Box>
