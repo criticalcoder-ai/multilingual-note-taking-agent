@@ -18,6 +18,9 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import MailIcon from '@mui/icons-material/Mail';
 import { ThemeProvider } from '@mui/material/styles';
+import TextareaAutosize from '@mui/material/TextareaAutosize';
+import LanguageDropdown from './Dropdown';
+import AudioDropzone from './AudioDropzone';
 
 const drawerWidth = 240;
 
@@ -79,6 +82,12 @@ const DrawerHeader = styled('div')(({ theme }) => ({
   ...theme.mixins.toolbar,
   justifyContent: 'flex-end',
 }));
+
+const languageOptions = [
+    { label: 'English', value: 'english' },
+    { label: 'Mandarin', value: 'mandarin' },
+    { label: 'Simplified Chinese', value: 'simplified_chinese' },
+  ];
 
 export default function PersistentDrawerLeft() {
   const theme = useTheme();
@@ -160,65 +169,225 @@ export default function PersistentDrawerLeft() {
         </List>
         
       </Drawer>
-      <Main open={open}>
+      <Main open={open} sx={{ height: '100%' }}>
         <DrawerHeader />
-        <ThemeProvider
-      theme={{
-        palette: {
-          primary: {
-            main: '#007FFF',
-            dark: '#0066CC',
-          },
-        },
-      }}
-    >
-      <Box
+        <Box
         sx={{
-          height: 100,
-          borderRadius: 1,
-          marginY: 2,
-          bgcolor: 'primary.main',
-          '&:hover': {
-            bgcolor: 'primary.dark',
-          },
-        }}
-        onClick={() => window.alert('Box clicked!')}
-      />
-    </ThemeProvider>
-    <ThemeProvider
-      theme={{
-        palette: {
-          primary: {
-            main: '#52B69A',
-            dark: '#0066CC',
-          },
-        },
-      }}
-    >
-      <Box
-        sx={{
-          height: 100,
-          borderRadius: 1,
-          marginY: 2,
-          bgcolor: 'primary.main'
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2,
+            padding: 2,
+            border: '1px solid white',
+            borderRadius: '8px',
+            backgroundColor: '#003049',
+            color: 'white'
         }}
         >
+        
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+            {/* <Box
+            sx={{
+                flex: 1,
+                border: '1px solid white',
+                borderRadius: '8px',
+                textAlign: 'center',
+                py: 1,
+                px: 2,
+                cursor: 'pointer',
+                '&:hover': {
+                    backgroundColor: 'green',
+                    color: 'white',
+                },
+            }}
+            >
+            Upload audio
+            </Box> */}
+            <AudioDropzone
+                onFileAccepted={(file) => {
+                    console.log('Uploaded file:', file);
+                    // TODO: handle file upload logic here
+                }}
+            />
+
+            <LanguageDropdown
+                options={languageOptions}
+                defaultValue="auto"
+                onChange={(val) => console.log('Selected language:', val)}
+            />
         </Box>
-      </ThemeProvider>
-      <Typography>
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
-          tempor incididunt ut labore et dolore magna aliqua. Rhoncus dolor purus non
-          enim praesent elementum facilisis leo vel. Risus at ultrices mi tempus
-          imperdiet. Semper risus in hendrerit gravida rutrum quisque non tellus.
-          Convallis convallis tellus id interdum velit laoreet id donec ultrices.
-          Odio morbi quis commodo odio aenean sed adipiscing. Amet nisl suscipit
-          adipiscing bibendum est ultricies integer quis. Cursus euismod quis viverra
-          nibh cras. Metus vulputate eu scelerisque felis imperdiet proin fermentum
-          leo. Mauris commodo quis imperdiet massa tincidunt. Cras tincidunt lobortis
-          feugiat vivamus at augue. At augue eget arcu dictum varius duis at
-          consectetur lorem. Velit sed ullamcorper morbi tincidunt. Lorem donec massa
-          sapien faucibus et molestie ac.
-        </Typography>
+
+        <Box
+            sx={{
+            display: 'flex',
+            gap: 1,
+            flexWrap: 'wrap',
+            border: '1px solid white',
+            borderRadius: '8px',
+            padding: 1,
+            }}
+        >
+            {['meeting', 'interview', 'podcast'].map((tag) => (
+            <Box
+                key={tag}
+                sx={{
+                border: '1px solid white',
+                borderRadius: '8px',
+                px: 2,
+                py: 0.5,
+                display: 'inline-block',
+                }}
+            >
+                {tag} ×
+            </Box>
+            ))}
+        </Box>
+
+        <Box
+            component="textarea"
+            placeholder="Enter your prompt here:"
+            rows={4}
+            sx={{
+            width: '100%',
+            backgroundColor: 'transparent',
+            color: 'white',
+            border: '1px solid white',
+            borderRadius: '8px',
+            padding: 1,
+            resize: 'none',
+            }}
+        />
+
+        {/* Send button */}
+        <Box
+            sx={{
+            alignSelf: 'center',
+            border: '1px solid white',
+            borderRadius: '8px',
+            paddingX: 4,
+            paddingY: 1,
+            cursor: 'pointer',
+            '&:hover': {
+                backgroundColor: 'green',
+                color: '#1e1e1e',
+            },
+            }}
+        >
+            Send / Retry
+        </Box>
+        </Box>
+
+        <Box
+        sx={{
+            marginTop: 4,
+            border: '1px solid white',
+            borderRadius: '8px',
+            backgroundColor: '#1e1e1e',
+            color: 'white',
+            overflow: 'hidden',
+        }}
+        >
+
+        <Box
+            sx={{
+                top: 10,
+                right: 10,
+                borderRadius: '5px',
+                padding: 1,
+                margin: 2,
+                fontSize: '0.85rem',
+            }}
+            >
+
+            <Typography variant="h5" gutterBottom align="left">
+                Transcribed text
+            </Typography>
+
+            <Box
+            sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                width: '100%', // spans full container width
+                marginTop: 2,
+            }}
+            >
+            {/* Left Side Buttons */}
+            <Box sx={{ display: 'flex' }}>
+                <Box
+                sx={{
+                    border: '1px solid white',
+                    borderRadius: '6px',
+                    paddingX: 1.5,
+                    paddingY: 0.3,
+                    marginRight: 2,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    '&:hover': {
+                    backgroundColor: 'white',
+                    color: '#1e1e1e',
+                    },
+                }}
+                >
+                Transcription
+                </Box>
+
+                <Box
+                sx={{
+                    border: '1px solid white',
+                    borderRadius: '6px',
+                    paddingX: 1.5,
+                    paddingY: 0.3,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    '&:hover': {
+                    backgroundColor: 'white',
+                    color: '#1e1e1e',
+                    },
+                }}
+                >
+                Notes
+                </Box>
+            </Box>
+
+            {/* Right Side Button */}
+            <Box
+                sx={{
+                border: '1px solid white',
+                borderRadius: '6px',
+                paddingX: 1.5,
+                paddingY: 0.3,
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                '&:hover': {
+                    backgroundColor: 'white',
+                    color: '#1e1e1e',
+                },
+                }}
+            >
+                Copy
+            </Box>
+            </Box>
+
+            
+        </Box>
+        <Divider sx={{ backgroundColor: 'white', marginY: 2, marginX: 2 }} />
+        <Box sx={{ position: 'relative', paddingX: 3, height: 300, overflowY: 'auto' }}>
+            <Typography>
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
+                tempor incididunt ut labore et dolore magna aliqua. Rhoncus dolor purus non
+                enim praesent elementum facilisis leo vel. Risus at ultrices mi tempus
+                imperdiet. Semper risus in hendrerit gravida rutrum quisque non tellus.
+                Convallis convallis tellus id interdum velit laoreet id donec ultrices.
+                Odio morbi quis commodo odio aenean sed adipiscing. Amet nisl suscipit
+                adipiscing bibendum est ultricies integer quis. Cursus euismod quis viverra
+                nibh cras. Metus vulputate eu scelerisque felis imperdiet proin fermentum
+                leo. Mauris commodo quis imperdiet massa tincidunt. Cras tincidunt lobortis
+                feugiat vivamus at augue. At augue eget arcu dictum varius duis at
+                consectetur lorem. Velit sed ullamcorper morbi tincidunt. Lorem donec massa
+                sapien faucibus et molestie ac. 
+            </Typography>
+        </Box>
+        </Box>
       </Main>
     </Box>
   );
