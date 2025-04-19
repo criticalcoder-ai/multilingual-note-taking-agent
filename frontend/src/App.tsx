@@ -1,13 +1,9 @@
-import Button from "@mui/material/Button";
-import ButtonAppBar from "./AppBar/AppBar";
+import Transcribe from "./Components/Transcribe";
 
 const App = () => {
   return (
     <>
-      <ButtonAppBar />
-      <h3>this is voice ai lorem ipsum</h3>
-      <Button variant="contained">my button</Button>
-      <Button variant="contained">Transcribe</Button>
+      <Transcribe />
     </>
   );
 };

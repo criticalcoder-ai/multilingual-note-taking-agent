@@ -1,5 +1,11 @@
-import React, { useState } from 'react';
-import { FormControl, InputLabel, MenuItem, Select, SelectChangeEvent } from '@mui/material';
+import React, { useState } from "react";
+import {
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  SelectChangeEvent,
+} from "@mui/material";
 
 type LanguageOption = {
   label: string;
@@ -12,7 +18,11 @@ interface LanguageDropdownProps {
   onChange?: (selectedValue: string) => void;
 }
 
-const LanguageDropdown: React.FC<LanguageDropdownProps> = ({ options, defaultValue = 'auto', onChange }) => {
+const LanguageDropdown: React.FC<LanguageDropdownProps> = ({
+  options,
+  defaultValue = "auto",
+  onChange,
+}) => {
   const [selected, setSelected] = useState(defaultValue);
 
   const handleChange = (event: SelectChangeEvent) => {
@@ -26,23 +36,20 @@ const LanguageDropdown: React.FC<LanguageDropdownProps> = ({ options, defaultVal
       sx={{
         flex: 1,
         minWidth: 160,
-        borderRadius: '8px',
-        '& .MuiOutlinedInput-notchedOutline': {
-          borderColor: 'white',
+        borderRadius: "8px",
+        "& .MuiOutlinedInput-notchedOutline": {
+          borderColor: "white",
         },
-        '& .MuiSvgIcon-root': {
-          color: 'white',
+        "& .MuiSvgIcon-root": {
+          color: "white",
         },
-        '& .MuiInputBase-input': {
-          color: 'white',
+        "& .MuiInputBase-input": {
+          color: "white",
         },
       }}
       size="small"
     >
-      <InputLabel
-        id="language-select-label"
-        sx={{ color: 'white' }}
-      >
+      <InputLabel id="language-select-label" sx={{ color: "white" }}>
         Language
       </InputLabel>
       <Select
@@ -51,8 +58,8 @@ const LanguageDropdown: React.FC<LanguageDropdownProps> = ({ options, defaultVal
         label="Language"
         onChange={handleChange}
         sx={{
-          borderRadius: '8px',
-          backgroundColor: 'transparent',
+          borderRadius: "8px",
+          backgroundColor: "transparent",
         }}
       >
         {options.map((option) => (
