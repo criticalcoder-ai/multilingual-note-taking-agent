@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 import shutil
 import os
+import datetime
 from multiprocessing import Process, Queue
 
 from audio.audio import TranscriptionMethod
@@ -281,6 +282,40 @@ async def create_empty_audio_session():
 
     db.close()
     return session_id
+
+
+class AudioSessionRead(BaseModel):
+    id: int
+    session_name: str
+    created_time: datetime.datetime
+    query_lang: str
+    query_file: str
+    query_prompt: str
+    query_audio_kind: str
+
+    class Config:
+        from_attributes = True  # Pydantic v2
+
+
+@app.get("/api/audio-sessions/")
+async def get_audio_sessions():
+    """
+    Retrieve a list of all audio sessions with their details,
+    excluding the output data.
+    ``sh
+    curl localhost:5000/api/audio-sessions/
+    ``
+    """
+    # Query the database to get all AudioSession objects
+    db = SessionLocal()
+
+    sessions = db.query(
+        AudioSession
+    ).all()  # or use await db.execute(select(AudioSession)) in async setup
+
+    db.close()
+
+    return sessions
 
 
 if __name__ == "__main__":
