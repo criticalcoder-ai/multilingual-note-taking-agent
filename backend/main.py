@@ -8,6 +8,8 @@ import datetime
 from typing import Optional
 from multiprocessing import Process, Queue
 
+from sqlalchemy import desc, or_, case
+
 from audio.audio import TranscriptionMethod
 from model.model import NotesMethod
 
@@ -48,15 +50,13 @@ def notes_worker(q, transcription, method):
 @app.post("/api/transcribe-audio/")
 async def transcribe_audio(
     file: UploadFile = File(),
-    method: TranscriptionMethod = TranscriptionMethod.alibaba_asr_api,
+    method: TranscriptionMethod = Query(default=TranscriptionMethod.alibaba_asr_api),
 ):
     """
     to check this route use this curl cmd with a sample file
     ``sh
-    curl -X POST localhost:5000/api/transcribe-audio/ \
+    curl -X POST localhost:5000/api/transcribe-audio/?method=alibaba_asr_api \
         -F "file=@voice_sample.mp3" \
-        -F "method=alibaba_asr_api" \
-        -H "Content-Type: multipart/form-data"
     ``
     """
 
@@ -311,9 +311,12 @@ async def get_audio_sessions():
     # Query the database to get all AudioSession objects
     db = SessionLocal()
 
-    sessions = db.query(
-        AudioSession
-    ).all()  # or use await db.execute(select(AudioSession)) in async setup
+    try:
+        sessions = db.query(AudioSession).all()
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed: {str(e)}")
 
     db.close()
 
@@ -359,27 +362,90 @@ async def get_session_detail(session_id: int):
     ``
     """
     db = SessionLocal()
-    # Query the database for the specific AudioSession by its ID
-    # Use joinedload to eagerly load the related 'output' data in the same query
-    # This avoids a separate query for the output data later (N+1 problem)
-    session = (
-        db.query(AudioSession)
-        .options(joinedload(AudioSession.output))
-        .filter(AudioSession.id == session_id)
-        .first()
-    )  # Use .first() as ID should be unique
 
-    # If no session is found with the given ID, raise a 404 Not Found error
-    if session is None:
-        raise HTTPException(
-            status_code=404, detail=f"Audio session with id {session_id} not found"
-        )
+    try:
+        # Query the database for the specific AudioSession by its ID
+        # Use joinedload to eagerly load the related 'output' data in the same query
+        # This avoids a separate query for the output data later (N+1 problem)
+        session = (
+            db.query(AudioSession)
+            .options(joinedload(AudioSession.output))
+            .filter(AudioSession.id == session_id)
+            .first()
+        )  # Use .first() as ID should be unique
+
+        # If no session is found with the given ID, raise a 404 Not Found error
+        if session is None:
+            raise HTTPException(
+                status_code=404, detail=f"Audio session with id {session_id} not found"
+            )
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed: {str(e)}")
 
     db.close()
 
     # FastAPI will automatically serialize the 'session' object
     # using the 'AudioSessionDetail' Pydantic model, including the nested 'output'.
     return session
+
+
+@app.get("/api/outputs/search/")
+async def search_audio_sessions(search_text: str = Query(..., min_length=1)):
+    """
+    Search audio sessions by text in transcription or notes
+    Returns list of AudioSessions that contain the search text in their output
+    ``sh
+    curl "localhost:5000/api/outputs/search/?search_text=XXX"
+    ``
+    """
+    if not search_text.strip():
+        return []
+
+    db = SessionLocal()
+
+    search_pattern = f"%{search_text}%"
+
+    # Calculate match score (1 point per matching field)
+    field_score = case(
+        (
+            Output.transcription_text.ilike(search_pattern),
+            1,
+        ),
+        else_=0,
+    ) + case(
+        (
+            Output.notes_text.ilike(search_pattern),
+            1,
+        ),
+        else_=0,
+    )
+
+    try:
+        results = (
+            db.query(AudioSession)
+            .join(Output)
+            .filter(
+                or_(
+                    Output.transcription_text.ilike(search_pattern),
+                    Output.notes_text.ilike(search_pattern),
+                )
+            )
+            # TODO: this is a diy method to get ranking - change to good method later
+            .order_by(
+                desc(field_score),  # Primary sort: most matching fields
+                desc(AudioSession.created_time),  # Secondary sort: newest first
+            )
+            .all()
+        )
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed: {str(e)}")
+
+    db.close()
+
+    return results
 
 
 if __name__ == "__main__":
