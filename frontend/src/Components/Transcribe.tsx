@@ -19,9 +19,18 @@ import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
+import SendIcon from '@mui/icons-material/Send';
 import MailIcon from "@mui/icons-material/Mail";
+import ExportPdfButton from "./ExportPDF";
+import TextField from '@mui/material/TextField';
+import InputAdornment from '@mui/material/InputAdornment';
+import SearchIcon from '@mui/icons-material/Search';
+
+import { copyToClipboard } from "../utils";
 import LanguageDropdown from "./Dropdown";
 import AudioDropzone from "./AudioDropzone";
+import Autoselect from "./Autoselect";
+
 
 const drawerWidth = 250;
 
@@ -89,15 +98,28 @@ const languageOptions = [
   { label: "Simplified Chinese", value: "simplified_chinese" },
 ];
 
-const handleCopy = () => {
-  window.alert('Dummy: Content copied to clipboard!');
-};
+const transcribedTexts = {
+  notes: "Lorem ipsum dolor sit amet consectetur adipisicing elit. Perferendis sint reprehenderit voluptatibus blanditiis ex quibusdam autem laborum facere corrupti cum ea, adipisci ducimus molestias. Maiores molestias eius nulla odit minus?",
+  transcription: "Not a Lorem ipsum dolor sit amet consectetur adipisicing elit. Perferendis sint reprehenderit voluptatibus blanditiis ex quibusdam autem laborum facere corrupti cum ea, adipisci ducimus molestias. Maiores molestias eius nulla odit minus?",
+}
 
 export default function PersistentDrawerLeft() {
   const theme = useTheme();
 
   const [open, setOpen] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const chats = ["Chat 1", "Chat 2", "Chat 3", "Chat 4", "Chat 5", "Chat 6", "Chat 7", "Chat 8", "Chat 9", "Chat 10"];
+  const filteredChats = chats.filter((chat) =>
+    chat.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleCopy = async () => {
+    const textToCopy = activeTab === 0 ? transcribedTexts.notes : transcribedTexts.transcription;
+    const success = await copyToClipboard(textToCopy);
+    console.log(success ? "Text copied to clipboard!" : "Failed to copy text.");
+  };
 
   const handleDrawerOpen = () => {
     setOpen(true);
@@ -172,26 +194,46 @@ export default function PersistentDrawerLeft() {
           </IconButton>
         </DrawerHeader>
         <Divider />
+        <Box sx={{ padding: 1 }}>
+          <TextField
+            fullWidth
+            variant="outlined"
+            size="small"
+            placeholder="Search chats..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
+            sx={{
+              backgroundColor: 'white',
+              borderRadius: 1,
+            }}
+          />
+        </Box>
         <List>
-          {[
-            "Chat 1",
-            "Chat 2",
-            "Chat 3",
-            "Chat 4",
-            "Chat 5",
-            "Chat 6",
-            "Chat 7",
-          ].map((text) => (
-            <ListItem key={text} disablePadding>
-              <ListItemButton>
-                <ListItemIcon>
-                  <MailIcon />
-                </ListItemIcon>
-                <ListItemText primary={text} />
-              </ListItemButton>
+          {filteredChats.length > 0 ? (
+            filteredChats.map((text) => (
+              <ListItem key={text} disablePadding>
+                <ListItemButton>
+                  <ListItemIcon>
+                    <MailIcon />
+                  </ListItemIcon>
+                  <ListItemText primary={text} />
+                </ListItemButton>
+              </ListItem>
+            ))
+          ) : (
+            <ListItem>
+              <ListItemText primary="No results found." />
             </ListItem>
-          ))}
+          )}
         </List>
+
       </Drawer>
       <Main open={open} sx={{ height: "100%" }}>
         <DrawerHeader />
@@ -241,31 +283,7 @@ export default function PersistentDrawerLeft() {
             </Box>
           </Box>
 
-          <Box
-            sx={{
-              display: "flex",
-              gap: 1,
-              flexWrap: "wrap",
-              border: "1px solid white",
-              borderRadius: "8px",
-              padding: 1,
-            }}
-          >
-            {["meeting", "interview", "podcast"].map((tag) => (
-              <Box
-                key={tag}
-                sx={{
-                  border: "1px solid white",
-                  borderRadius: "8px",
-                  px: 2,
-                  py: 0.5,
-                  display: "inline-block",
-                }}
-              >
-                {tag} ×
-              </Box>
-            ))}
-          </Box>
+          <Autoselect />
 
           <Box
             component="textarea"
@@ -285,17 +303,22 @@ export default function PersistentDrawerLeft() {
           <Box
             sx={{
               alignSelf: "center",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               border: "1px solid white",
               borderRadius: "8px",
               paddingX: 4,
               paddingY: 1,
               cursor: "pointer",
+              color: "white",
               "&:hover": {
                 backgroundColor: "green",
               },
             }}
           >
-            Send / Retry
+            <SendIcon sx={{ marginRight: 1 }} />
+            Send
           </Box>
         </Box>
 
@@ -359,12 +382,12 @@ export default function PersistentDrawerLeft() {
             >
               {activeTab === 0 && (
                 <Typography>
-                  Lorem ipsum dolor sit amet consectetur adipisicing elit. Perferendis sint reprehenderit voluptatibus blanditiis ex quibusdam autem laborum facere corrupti cum ea, adipisci ducimus molestias. Maiores molestias eius nulla odit minus?
+                  {transcribedTexts.notes}
                 </Typography>
               )}
               {activeTab === 1 && (
                 <Typography>
-                  Lorem ipsum dolor sit amet consectetur adipisicing elit. Laboriosam temporibus earum maxime ipsam ipsum, eaque ipsa aspernatur rem dolore cumque nam vero nihil officia, assumenda eum, dolor dolores necessitatibus et! Lorem ipsum dolor sit amet consectetur, adipisicing elit. Eaque doloremque necessitatibus praesentium ratione! Alias, rem porro iure, nulla ex velit saepe iste perferendis fugit nostrum eaque, laboriosam animi? Deleniti, dolorem?
+                  {transcribedTexts.transcription}
                 </Typography>
               )}
             </Box>
@@ -380,6 +403,9 @@ export default function PersistentDrawerLeft() {
               }}
             >
          
+              <ExportPdfButton
+                contentToExport={activeTab === 0 ? transcribedTexts.notes : transcribedTexts.transcription} 
+              />
               
             </Box>
           </Box>

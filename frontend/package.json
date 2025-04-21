@@ -16,6 +16,8 @@
     "@fontsource/roboto": "^5.2.5",
     "@mui/icons-material": "^7.0.2",
     "@mui/material": "^7.0.2",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.1",
     "prettier": "^3.5.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
