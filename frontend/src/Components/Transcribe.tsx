@@ -1,5 +1,9 @@
 import { styled, useTheme } from "@mui/material/styles";
+import { useState } from "react";
+import Tabs from "@mui/material/Tabs";
+import Tab from "@mui/material/Tab";
 import Box from "@mui/material/Box";
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import Drawer from "@mui/material/Drawer";
 import CssBaseline from "@mui/material/CssBaseline";
 import MuiAppBar, { AppBarProps as MuiAppBarProps } from "@mui/material/AppBar";
@@ -18,7 +22,6 @@ import ListItemText from "@mui/material/ListItemText";
 import MailIcon from "@mui/icons-material/Mail";
 import LanguageDropdown from "./Dropdown";
 import AudioDropzone from "./AudioDropzone";
-import { useState } from "react";
 
 const drawerWidth = 250;
 
@@ -86,9 +89,15 @@ const languageOptions = [
   { label: "Simplified Chinese", value: "simplified_chinese" },
 ];
 
+const handleCopy = () => {
+  window.alert('Dummy: Content copied to clipboard!');
+};
+
 export default function PersistentDrawerLeft() {
   const theme = useTheme();
-  const [open, setOpen] = useState(false);
+
+  const [open, setOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState(0);
 
   const handleDrawerOpen = () => {
     setOpen(true);
@@ -310,9 +319,56 @@ export default function PersistentDrawerLeft() {
               fontSize: "0.85rem",
             }}
           >
-            <Typography variant="h5" gutterBottom align="left">
-              Transcribed text
-            </Typography>
+
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderBottom: 1,
+                borderColor: 'divider',
+              }}
+            >
+              <Tabs
+                value={activeTab}
+                onChange={(event, newValue) => setActiveTab(newValue)}
+                textColor="inherit"
+                indicatorColor="secondary"
+                aria-label="transcription and notes tabs"
+                sx={{
+                  borderBottom: 1,
+                  borderColor: 'divider',
+                }}
+              >
+                <Tab label="Transcription" />
+                <Tab label="Notes" />
+              </Tabs>
+              <IconButton onClick={handleCopy} aria-label="copy" sx={{ color: (theme) => theme.palette.common.white }}>
+                <ContentCopyIcon />
+              </IconButton>
+            </Box>
+
+            <Box
+              sx={{
+                position: 'relative',
+                paddingX: 1,
+                paddingY: 2,
+                height: 300,
+                overflowY: 'auto',
+              }}
+            >
+              {activeTab === 0 && (
+                <Typography>
+                  Lorem ipsum dolor sit amet consectetur adipisicing elit. Perferendis sint reprehenderit voluptatibus blanditiis ex quibusdam autem laborum facere corrupti cum ea, adipisci ducimus molestias. Maiores molestias eius nulla odit minus?
+                </Typography>
+              )}
+              {activeTab === 1 && (
+                <Typography>
+                  Lorem ipsum dolor sit amet consectetur adipisicing elit. Laboriosam temporibus earum maxime ipsam ipsum, eaque ipsa aspernatur rem dolore cumque nam vero nihil officia, assumenda eum, dolor dolores necessitatibus et! Lorem ipsum dolor sit amet consectetur, adipisicing elit. Eaque doloremque necessitatibus praesentium ratione! Alias, rem porro iure, nulla ex velit saepe iste perferendis fugit nostrum eaque, laboriosam animi? Deleniti, dolorem?
+                </Typography>
+              )}
+            </Box>
+
 
             <Box
               sx={{
@@ -323,85 +379,9 @@ export default function PersistentDrawerLeft() {
                 marginTop: 2,
               }}
             >
-              <Box sx={{ display: "flex" }}>
-                <Box
-                  sx={{
-                    border: "1px solid white",
-                    borderRadius: "6px",
-                    paddingX: 1.5,
-                    paddingY: 0.3,
-                    marginRight: 2,
-                    fontSize: "0.85rem",
-                    cursor: "pointer",
-                    "&:hover": {
-                      backgroundColor: "white",
-                      color: "#1e1e1e",
-                    },
-                  }}
-                >
-                  Transcription
-                </Box>
-
-                <Box
-                  sx={{
-                    border: "1px solid white",
-                    borderRadius: "6px",
-                    paddingX: 1.5,
-                    paddingY: 0.3,
-                    fontSize: "0.85rem",
-                    cursor: "pointer",
-                    "&:hover": {
-                      backgroundColor: "white",
-                      color: "#1e1e1e",
-                    },
-                  }}
-                >
-                  Notes
-                </Box>
-              </Box>
-
-              <Box
-                sx={{
-                  border: "1px solid white",
-                  borderRadius: "6px",
-                  paddingX: 1.5,
-                  paddingY: 0.3,
-                  fontSize: "0.85rem",
-                  cursor: "pointer",
-                  "&:hover": {
-                    backgroundColor: "white",
-                    color: "#1e1e1e",
-                  },
-                }}
-              >
-                Copy
-              </Box>
+         
+              
             </Box>
-          </Box>
-          <Divider sx={{ backgroundColor: "white", marginY: 2, marginX: 2 }} />
-          <Box
-            sx={{
-              position: "relative",
-              paddingX: 3,
-              height: 300,
-              overflowY: "auto",
-            }}
-          >
-            <Typography>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-              eiusmod tempor incididunt ut labore et dolore magna aliqua.
-              Rhoncus dolor purus non enim praesent elementum facilisis leo vel.
-              Risus at ultrices mi tempus imperdiet. Semper risus in hendrerit
-              gravida rutrum quisque non tellus. Convallis convallis tellus id
-              interdum velit laoreet id donec ultrices. Odio morbi quis commodo
-              odio aenean sed adipiscing. Amet nisl suscipit adipiscing bibendum
-              est ultricies integer quis. Cursus euismod quis viverra nibh cras.
-              Metus vulputate eu scelerisque felis imperdiet proin fermentum
-              leo. Mauris commodo quis imperdiet massa tincidunt. Cras tincidunt
-              lobortis feugiat vivamus at augue. At augue eget arcu dictum
-              varius duis at consectetur lorem. Velit sed ullamcorper morbi
-              tincidunt. Lorem donec massa sapien faucibus et molestie ac.
-            </Typography>
           </Box>
         </Box>
       </Main>

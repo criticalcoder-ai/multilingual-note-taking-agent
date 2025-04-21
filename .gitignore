@@ -3,3 +3,6 @@ res/
 
 # model files
 gguf_models/
+
+# Environment files
+.env
