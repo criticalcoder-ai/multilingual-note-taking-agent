@@ -144,8 +144,10 @@ async def notes_from_transcription_text(
 async def transcribe_and_generate_notes(
     session_id: int = Query(...),
     file: UploadFile = File(...),
-    transcription_method: TranscriptionMethod = TranscriptionMethod.alibaba_asr_api,
-    notes_method: NotesMethod = NotesMethod.deepseek_openrouter_api,
+    transcription_method: TranscriptionMethod = Query(
+        default=TranscriptionMethod.alibaba_asr_api
+    ),
+    notes_method: NotesMethod = Query(default=NotesMethod.deepseek_openrouter_api),
     session_name: str = Query(default="default-session-name"),
     query_lang: str = Query(default="default-query-lang"),
     query_prompt: str = Query(default="default-query-prompt"),
@@ -155,10 +157,8 @@ async def transcribe_and_generate_notes(
     Does both transcription and notes generation, and returns both.
     Usage:
     ``sh
-    curl -X POST "localhost:5000/api/transcribe-and-generate-notes/?session_id=XXX&session_name=XXX&query_lang=XXX" \
+    curl -X POST "localhost:5000/api/transcribe-and-generate-notes/?notes_method=dummy&transcription_method=dummy&session_id=XXX&session_name=XXX&query_lang=XXX" \
         -F "file=@voice_sample.mp3" \
-        -F "transcription_method=alibaba_asr_api" \
-        -F "notes_method=deepseek_openrouter_api" \
         -H "Content-Type: multipart/form-data"
     ``
     """
