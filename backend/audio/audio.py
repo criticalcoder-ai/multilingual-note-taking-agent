@@ -40,7 +40,8 @@ def transcribe_with_alibaba_asr_api(path: str) -> str:
     format = "pcm"
 
     url = (
-        f"https://nls-gateway-ap-southeast-1.aliyuncs.com/stream/v1/asr"
+        # f"https://nls-gateway-ap-southeast-1.aliyuncs.com/stream/v1/asr"
+        f"https://nls-gateway-cn-shanghai.aliyuncs.com/stream/v1/asr"
         f"?appkey={appkey}&format={format}&sample_rate=16000"
         f"&enable_punctuation_prediction=true&enable_inverse_text_normalization=true"
     )
@@ -73,11 +74,13 @@ def transcribe_mp3(
 ) -> str:
     transcription = ""
 
-    if method == TranscriptionMethod.whisper:
-        transcription = transcribe_with_whisper(path)
-    elif method == TranscriptionMethod.alibaba_asr_api:
-        transcription = transcribe_with_alibaba_asr_api(path)
-    else:
-        assert 0
+    # if method == TranscriptionMethod.whisper:
+    #     transcription = transcribe_with_whisper(path)
+    # elif method == TranscriptionMethod.alibaba_asr_api:
+    #     transcription = transcribe_with_alibaba_asr_api(path)
+    # else:
+    #     assert 0
+    #
+    # return transcription
 
-    return transcription
+    return "dummy transcription"

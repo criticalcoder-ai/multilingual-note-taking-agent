@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -8,6 +8,9 @@ from multiprocessing import Process, Queue
 
 from audio.audio import TranscriptionMethod
 from model.model import NotesMethod
+
+from db.db_setup import AudioSession, Output, SessionLocal, setup_db
+from db.db_util import add_dummy_data, view_db
 
 app = FastAPI()
 
@@ -23,6 +26,7 @@ UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
+# TODO: make it accept the query options to be used later
 def transcribe_worker(q, file_path, method):
     from audio.audio import transcribe_mp3
 
@@ -37,6 +41,7 @@ def notes_worker(q, transcription, method):
     q.put(result)
 
 
+# DEPRECATED: use only for local testing
 @app.post("/api/transcribe-audio/")
 async def transcribe_audio(
     file: UploadFile = File(),
@@ -90,6 +95,7 @@ class TranscriptionInput(BaseModel):
     transcription_text: str
 
 
+# DEPRECATED: use only for local testing
 @app.post("/api/notes-from-transcription-text")
 async def notes_from_transcription_text(
     input_data: TranscriptionInput,
@@ -125,22 +131,38 @@ async def notes_from_transcription_text(
 
 @app.post("/api/transcribe-and-generate-notes/")
 async def transcribe_and_generate_notes(
-    file: UploadFile = File(),
+    session_id: int = Query(...),
+    file: UploadFile = File(...),
     transcription_method: TranscriptionMethod = TranscriptionMethod.alibaba_asr_api,
     notes_method: NotesMethod = NotesMethod.deepseek_openrouter_api,
+    session_name: str = Query(default="default-session-name"),
+    query_lang: str = Query(default="default-query-lang"),
+    query_prompt: str = Query(default="default-query-prompt"),
+    query_audio_kind: str = Query(default="default-query-audio-kind"),
 ):
     """
     Does both transcription and notes generation, and returns both.
     Usage:
     ``sh
-    curl -X POST localhost:5000/api/transcribe-and-generate-notes/ \
+    curl -X POST "localhost:5000/api/transcribe-and-generate-notes/?session_id=XXX&session_name=XXX&query_lang=XXX" \
         -F "file=@voice_sample.mp3" \
         -F "transcription_method=alibaba_asr_api" \
         -F "notes_method=deepseek_openrouter_api" \
         -H "Content-Type: multipart/form-data"
     ``
     """
-    print(f"transcribe_and_generate_notes route called with {file=}")
+
+    if not session_id:
+        raise HTTPException(
+            status_code=400, detail="Missing session_id in query parameters"
+        )
+
+    try:
+        session_id = int(session_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="session_id must be an integer")
+
+    print(f"transcribe_and_generate_notes route called with {file=}, {session_id}")
 
     if file.filename is None:
         return JSONResponse(
@@ -149,7 +171,7 @@ async def transcribe_and_generate_notes(
 
     file_path = os.path.join(UPLOAD_DIR, file.filename)
 
-    # Save file
+    # Save file to disk (do not delete later)
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
@@ -160,9 +182,6 @@ async def transcribe_and_generate_notes(
     )
     transcribe_p.start()
     transcribe_p.join()
-
-    # Remove file
-    os.remove(file_path)
 
     if not transcribe_q.empty():
         transcription = transcribe_q.get()
@@ -181,10 +200,96 @@ async def transcribe_and_generate_notes(
     else:
         raise HTTPException(status_code=500, detail="Notes generation failed")
 
+    # Database operations
+    db = SessionLocal()
+    try:
+        audio_session = (
+            db.query(AudioSession).filter(AudioSession.id == session_id).first()
+        )
+        if not audio_session:
+            db.close()
+            raise HTTPException(
+                status_code=404, detail=f"No AudioSession found with id {session_id}"
+            )
+
+        # Update session fields
+        audio_session.session_name = session_name
+        audio_session.query_file = file.filename
+        audio_session.query_lang = query_lang
+        audio_session.query_prompt = query_prompt
+        audio_session.query_audio_kind = query_audio_kind
+
+        # Check for existing output in this session
+        existing_output = (
+            db.query(Output).filter(Output.audio_session_id == audio_session.id).first()
+        )
+
+        # Update existing output or create new if none exists
+        if existing_output:
+            existing_output.transcription_text = transcription
+            existing_output.notes_text = notes
+        else:
+            output = Output(
+                transcription_text=transcription,
+                notes_text=notes,
+                audio_session_id=audio_session.id,
+            )
+            db.add(output)
+
+        # Commit changes (updates or new output)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    db.close()
+
     return {"transcription": transcription, "notes": notes}
+
+
+@app.get("/api/audio-sessions/new", response_model=int)
+async def create_empty_audio_session():
+    """
+    Create an empty AudioSession with default empty values and return its ID.
+    ``sh
+    curl -X GET localhost:5000/api/audio-sessions/new
+    ``
+    """
+    db = SessionLocal()
+    session_id = None
+
+    try:
+        # Create new session with empty required fields
+        new_session = AudioSession(
+            session_name="",
+            query_lang="",
+            query_file="",
+            query_prompt="",
+            query_audio_kind="",
+        )
+
+        db.add(new_session)
+        db.commit()
+        db.refresh(new_session)  # Refresh to get the auto-generated ID
+
+        session_id = new_session.id
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500, detail=f"Failed to create audio session: {str(e)}"
+        )
+
+    db.close()
+    return session_id
 
 
 if __name__ == "__main__":
     import uvicorn
+
+    # Run the DB setup (this will create tables)
+    setup_db()
+
+    add_dummy_data()
+    view_db()
 
     uvicorn.run("main:app", host="localhost", port=5000, log_level="info")

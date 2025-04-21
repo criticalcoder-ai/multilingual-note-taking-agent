@@ -96,11 +96,13 @@ def generate_notes_from_transcript(
 ) -> str:
     notes = ""
 
-    if method == NotesMethod.llama_cpp_local:
-        notes = generate_notes_from_transcript_llama_cpp_local(transcript)
-    elif method == NotesMethod.deepseek_openrouter_api:
-        notes = generate_notes_from_transcript_deepseek_openrouter_api(transcript)
-    else:
-        assert 0
+    # if method == NotesMethod.llama_cpp_local:
+    #     notes = generate_notes_from_transcript_llama_cpp_local(transcript)
+    # elif method == NotesMethod.deepseek_openrouter_api:
+    #     notes = generate_notes_from_transcript_deepseek_openrouter_api(transcript)
+    # else:
+    #     assert 0
+    #
+    # return notes
 
-    return notes
+    return "dummy notes"
