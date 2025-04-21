@@ -32,10 +32,18 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 # TODO: make it accept the query options to be used later
-def transcribe_worker(q, file_path, method):
+def transcribe_worker(
+    q, file_path, method, query_lang=None, query_prompt=None, query_audio_kind=None
+):
     from audio.audio import transcribe_mp3
 
-    result = transcribe_mp3(file_path, method)
+    result = transcribe_mp3(
+        file_path,
+        method,
+        query_lang=query_lang,
+        query_prompt=query_prompt,
+        query_audio_kind=query_audio_kind,
+    )
     q.put(result)
 
 
@@ -136,8 +144,10 @@ async def notes_from_transcription_text(
 async def transcribe_and_generate_notes(
     session_id: int = Query(...),
     file: UploadFile = File(...),
-    transcription_method: TranscriptionMethod = TranscriptionMethod.alibaba_asr_api,
-    notes_method: NotesMethod = NotesMethod.deepseek_openrouter_api,
+    transcription_method: TranscriptionMethod = Query(
+        default=TranscriptionMethod.alibaba_asr_api
+    ),
+    notes_method: NotesMethod = Query(default=NotesMethod.deepseek_openrouter_api),
     session_name: str = Query(default="default-session-name"),
     query_lang: str = Query(default="default-query-lang"),
     query_prompt: str = Query(default="default-query-prompt"),
@@ -147,10 +157,8 @@ async def transcribe_and_generate_notes(
     Does both transcription and notes generation, and returns both.
     Usage:
     ``sh
-    curl -X POST "localhost:5000/api/transcribe-and-generate-notes/?session_id=XXX&session_name=XXX&query_lang=XXX" \
+    curl -X POST "localhost:5000/api/transcribe-and-generate-notes/?notes_method=dummy&transcription_method=dummy&session_id=XXX&session_name=XXX&query_lang=XXX" \
         -F "file=@voice_sample.mp3" \
-        -F "transcription_method=alibaba_asr_api" \
-        -F "notes_method=deepseek_openrouter_api" \
         -H "Content-Type: multipart/form-data"
     ``
     """
@@ -181,7 +189,15 @@ async def transcribe_and_generate_notes(
     # Step 1: Run transcription in isolated process
     transcribe_q = Queue()
     transcribe_p = Process(
-        target=transcribe_worker, args=(transcribe_q, file_path, transcription_method)
+        target=transcribe_worker,
+        args=(
+            transcribe_q,
+            file_path,
+            transcription_method,
+            query_lang,
+            query_prompt,
+            query_audio_kind,
+        ),
     )
     transcribe_p.start()
     transcribe_p.join()

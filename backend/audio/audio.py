@@ -10,15 +10,32 @@ from dotenv import load_dotenv
 class TranscriptionMethod(str, Enum):
     whisper = "whisper"
     alibaba_asr_api = "alibaba_asr_api"
+    dummy = "dummy"
 
 
-def transcribe_with_whisper(path: str) -> str:
+def transcribe_with_whisper(
+    path: str, query_lang=None, query_prompt=None, query_audio_kind=None
+) -> str:
     model = whisper.load_model("turbo")
+
+    # Build initial_prompt from parameters with null checking
+    initial_prompt_parts = []
+    if query_prompt is not None:
+        initial_prompt_parts.append("user prompt: ")
+        initial_prompt_parts.append(query_prompt)
+    if query_lang is not None:
+        initial_prompt_parts.append("lang: ")
+        initial_prompt_parts.append(query_lang)
+    if query_audio_kind is not None:
+        initial_prompt_parts.append("audio_kind: ")
+        initial_prompt_parts.append(query_audio_kind)
+    initial_prompt = ", ".join(initial_prompt_parts) if initial_prompt_parts else None
+
     # TODO: fill the decode_options field with correct terms to work correctly
     result = model.transcribe(
         audio=path,
         word_timestamps=True,  # TODO: timestamps are not coming in the output check the code for this
-        initial_prompt="this is my office meet recording",
+        initial_prompt=initial_prompt,
     )
     text = result.get("text")
 
@@ -40,10 +57,9 @@ def transcribe_with_alibaba_asr_api(path: str) -> str:
     format = "pcm"
 
     url = (
-        # f"https://nls-gateway-ap-southeast-1.aliyuncs.com/stream/v1/asr"
-        f"https://nls-gateway-cn-shanghai.aliyuncs.com/stream/v1/asr"
+        f"http://nls-gateway-ap-southeast-1.aliyuncs.com/stream/v1/asr"
         f"?appkey={appkey}&format={format}&sample_rate=16000"
-        f"&enable_punctuation_prediction=true&enable_inverse_text_normalization=true"
+        # f"&enable_punctuation_prediction=true&enable_inverse_text_normalization=true"
     )
     headers = {
         "X-NLS-Token": token,
@@ -70,17 +86,23 @@ def transcribe_with_alibaba_asr_api(path: str) -> str:
 
 
 def transcribe_mp3(
-    path: str, method: TranscriptionMethod = TranscriptionMethod.alibaba_asr_api
+    path: str,
+    method: TranscriptionMethod = TranscriptionMethod.alibaba_asr_api,
+    query_lang=None,
+    query_prompt=None,
+    query_audio_kind=None,
 ) -> str:
     transcription = ""
 
-    # if method == TranscriptionMethod.whisper:
-    #     transcription = transcribe_with_whisper(path)
-    # elif method == TranscriptionMethod.alibaba_asr_api:
-    #     transcription = transcribe_with_alibaba_asr_api(path)
-    # else:
-    #     assert 0
-    #
-    # return transcription
+    if method == TranscriptionMethod.whisper:
+        transcription = transcribe_with_whisper(
+            path, query_lang, query_prompt, query_audio_kind
+        )
+    elif method == TranscriptionMethod.alibaba_asr_api:
+        transcription = transcribe_with_alibaba_asr_api(path)
+    elif method == TranscriptionMethod.dummy:
+        transcription = "dummy notes"
+    else:
+        assert 0
 
-    return "dummy transcription"
+    return transcription
