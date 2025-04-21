@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 class NotesMethod(str, Enum):
     llama_cpp_local = "llama_cpp_local"
     deepseek_openrouter_api = "deepseek_openrouter_api"
+    dummy = "dummy"
 
 
 def generate_notes_from_transcript_llama_cpp_local(transcript: str) -> str:
@@ -96,13 +97,13 @@ def generate_notes_from_transcript(
 ) -> str:
     notes = ""
 
-    # if method == NotesMethod.llama_cpp_local:
-    #     notes = generate_notes_from_transcript_llama_cpp_local(transcript)
-    # elif method == NotesMethod.deepseek_openrouter_api:
-    #     notes = generate_notes_from_transcript_deepseek_openrouter_api(transcript)
-    # else:
-    #     assert 0
-    #
-    # return notes
+    if method == NotesMethod.llama_cpp_local:
+        notes = generate_notes_from_transcript_llama_cpp_local(transcript)
+    elif method == NotesMethod.deepseek_openrouter_api:
+        notes = generate_notes_from_transcript_deepseek_openrouter_api(transcript)
+    elif method == NotesMethod.dummy:
+        notes = "dummy transcript"
+    else:
+        assert 0
 
-    return "dummy notes"
+    return notes
