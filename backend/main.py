@@ -5,6 +5,7 @@ from pydantic import BaseModel
 import shutil
 import os
 import datetime
+from typing import Optional
 from multiprocessing import Process, Queue
 
 from audio.audio import TranscriptionMethod
@@ -12,6 +13,7 @@ from model.model import NotesMethod
 
 from db.db_setup import AudioSession, Output, SessionLocal, setup_db
 from db.db_util import add_dummy_data, view_db
+from sqlalchemy.orm import joinedload
 
 app = FastAPI()
 
@@ -316,6 +318,68 @@ async def get_audio_sessions():
     db.close()
 
     return sessions
+
+
+# Pydantic model for the nested Output data
+class OutputRead(BaseModel):
+    id: int
+    created_time: datetime.datetime
+    transcription_text: str
+    notes_text: str
+    audio_session_id: (
+        int  # Include FK for clarity if needed, though often omitted in nested reads
+    )
+
+    class Config:
+        from_attributes = True  # Pydantic v2
+
+
+class AudioSessionDetail(BaseModel):
+    id: int
+    session_name: str
+    created_time: datetime.datetime
+    query_lang: str
+    query_file: str
+    query_prompt: str
+    query_audio_kind: str
+    # Nest the OutputRead model. Make Optional if Output can be null.
+    output: Optional[OutputRead] = None
+
+    class Config:
+        from_attributes = True  # Pydantic v2
+
+
+@app.get("/api/audio-sessions/{session_id}/", response_model=AudioSessionDetail)
+async def get_session_detail(session_id: int):
+    """
+    Retrieve details for a specific audio session, including its output data,
+    by the session's ID.
+    ``sh
+    curl localhost:5000/api/audio-sessions/XX/
+    ``
+    """
+    db = SessionLocal()
+    # Query the database for the specific AudioSession by its ID
+    # Use joinedload to eagerly load the related 'output' data in the same query
+    # This avoids a separate query for the output data later (N+1 problem)
+    session = (
+        db.query(AudioSession)
+        .options(joinedload(AudioSession.output))
+        .filter(AudioSession.id == session_id)
+        .first()
+    )  # Use .first() as ID should be unique
+
+    # If no session is found with the given ID, raise a 404 Not Found error
+    if session is None:
+        raise HTTPException(
+            status_code=404, detail=f"Audio session with id {session_id} not found"
+        )
+
+    db.close()
+
+    # FastAPI will automatically serialize the 'session' object
+    # using the 'AudioSessionDetail' Pydantic model, including the nested 'output'.
+    return session
 
 
 if __name__ == "__main__":
