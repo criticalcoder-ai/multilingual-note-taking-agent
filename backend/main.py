@@ -1,5 +1,6 @@
-from fastapi import FastAPI, File, HTTPException, Query, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 import shutil
@@ -20,7 +21,7 @@ from sqlalchemy.orm import joinedload
 app = FastAPI()
 
 
-@app.get("/")
+@app.get("/hello")
 async def root():
     return {"message": "Hello voice ai"}
 
@@ -462,6 +463,23 @@ async def search_audio_sessions(search_text: str = Query(..., min_length=1)):
     db.close()
 
     return results
+
+
+# TODO: sometimes all of these fails - there could be redundancy too,  modify later
+frontend_dist = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+
+app.mount(
+    "/assets",
+    StaticFiles(directory=os.path.join(frontend_dist, "assets")),
+    name="assets",
+)
+app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="static")
+
+
+@app.get("/{full_path:path}")
+async def serve_react(full_path: str, request: Request):
+    # Return the index.html file for all client-side routes
+    return FileResponse(os.path.join(frontend_dist, "index.html"))
 
 
 if __name__ == "__main__":

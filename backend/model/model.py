@@ -1,5 +1,9 @@
+try:
+    from llama_cpp import Llama
+except ImportError:
+    Llama = None
+
 from enum import Enum
-from llama_cpp import Llama
 
 import os
 import json
@@ -15,6 +19,9 @@ class NotesMethod(str, Enum):
 
 
 def generate_notes_from_transcript_llama_cpp_local(transcript: str) -> str:
+    if Llama is None:
+        raise ImportError("Whisper module is not installed.")
+
     llm = Llama(
         # model_path="../gguf_models/Qwen2.5-7B-Instruct-Q5_K_M/qwen2.5-7b-instruct-q5_k_m.gguf",
         model_path="../gguf_models/DeepSeek-R1-Distill-Llama-8B-Q4_K_M.gguf",
