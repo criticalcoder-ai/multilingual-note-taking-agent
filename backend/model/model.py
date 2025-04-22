@@ -1,5 +1,9 @@
+try:
+    from llama_cpp import Llama
+except ImportError:
+    Llama = None
+
 from enum import Enum
-from llama_cpp import Llama
 
 import os
 import json
@@ -11,10 +15,15 @@ from dotenv import load_dotenv
 class NotesMethod(str, Enum):
     llama_cpp_local = "llama_cpp_local"
     deepseek_openrouter_api = "deepseek_openrouter_api"
+    gemini_openrouter_api = "gemini_openrouter_api"
+    qwen_openrouter_api = "qwen_openrouter_api"
     dummy = "dummy"
 
 
 def generate_notes_from_transcript_llama_cpp_local(transcript: str) -> str:
+    if Llama is None:
+        raise ImportError("Whisper module is not installed.")
+
     llm = Llama(
         # model_path="../gguf_models/Qwen2.5-7B-Instruct-Q5_K_M/qwen2.5-7b-instruct-q5_k_m.gguf",
         model_path="../gguf_models/DeepSeek-R1-Distill-Llama-8B-Q4_K_M.gguf",
@@ -53,7 +62,9 @@ def generate_notes_from_transcript_llama_cpp_local(transcript: str) -> str:
     return output["choices"][0]["text"]
 
 
-def generate_notes_from_transcript_deepseek_openrouter_api(transcript: str) -> str:
+def generate_notes_from_transcript_deepseek_openrouter_api(
+    transcript: str, query_prompt=None
+) -> str:
     load_dotenv()
 
     print(f"hello from openrouter deepseek api call, {transcript=}")
@@ -71,10 +82,9 @@ def generate_notes_from_transcript_deepseek_openrouter_api(transcript: str) -> s
     }
 
     prompt = (
-        "Convert the following transcript into organized, structured notes:\n\n"
-        f"{transcript}\n\n"
-        "Make sure the notes are clear, concise, in english and well-formatted with bullet points or headings where needed. "
-        "Only output the final notes - no talking"
+        "Create structured English notes from this transcript using bullet points/headings. "
+        "Apply relevant formatting requests from user (if about organization/style). "
+        f"Output only formatted notes:\n\nTranscript:{transcript}\nUser requests:{query_prompt}"
     )
 
     payload = {
@@ -92,15 +102,109 @@ def generate_notes_from_transcript_deepseek_openrouter_api(transcript: str) -> s
         raise RuntimeError(f"Request failed: {response.status_code} - {response.text}")
 
 
+def generate_notes_from_transcript_gemini_openrouter_api(
+    transcript: str, query_prompt=None
+) -> str:
+    load_dotenv()
+
+    print(f"hello from openrouter gemini api call, {transcript=}")
+
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        raise ValueError("OPENROUTER_API_KEY not found in .env")
+
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        # Optional headers
+        # "HTTP-Referer": "https://example.com",
+        # "X-Title": "Transcript Note Taker",
+    }
+
+    prompt = (
+        "Create structured English notes from this transcript using bullet points/headings. "
+        "Apply relevant formatting requests from user (if about organization/style). "
+        f"Output only formatted notes:\n\nTranscript:{transcript}\nUser requests:{query_prompt}"
+    )
+
+    payload = {
+        "model": "google/gemini-2.0-flash-exp:free",
+        "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}]}],
+    }
+
+    response = requests.post(url, headers=headers, data=json.dumps(payload))
+
+    print(f"got {response=}")
+
+    if response.status_code == 200:
+        return response.json()["choices"][0]["message"]["content"].strip()
+    else:
+        raise RuntimeError(f"Request failed: {response.status_code} - {response.text}")
+
+
+def generate_notes_from_transcript_qwen_openrouter_api(
+    transcript: str, query_prompt=None
+) -> str:
+    load_dotenv()
+
+    print(f"hello from openrouter qwen api call, {transcript=}")
+
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        raise ValueError("OPENROUTER_API_KEY not found in .env")
+
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        # Optional headers
+        # "HTTP-Referer": "https://example.com",
+        # "X-Title": "Transcript Note Taker",
+    }
+
+    prompt = (
+        "Create structured English notes from this transcript using bullet points/headings. "
+        "Apply relevant formatting requests from user (if about organization/style). "
+        f"Output only formatted notes:\n\nTranscript:{transcript}\nUser requests:{query_prompt}"
+    )
+
+    payload = {
+        "model": "qwen/qwq-32b:free",
+        "messages": [{"role": "user", "content": prompt}],
+    }
+
+    response = requests.post(url, headers=headers, data=json.dumps(payload))
+
+    print(f"got {response=}")
+
+    if response.status_code == 200:
+        return response.json()["choices"][0]["message"]["content"].strip()
+    else:
+        raise RuntimeError(f"Request failed: {response.status_code} - {response.text}")
+
+
 def generate_notes_from_transcript(
-    transcript: str, method: NotesMethod = NotesMethod.deepseek_openrouter_api
+    transcript: str,
+    method: NotesMethod = NotesMethod.deepseek_openrouter_api,
+    query_prompt=None,
 ) -> str:
     notes = ""
 
     if method == NotesMethod.llama_cpp_local:
         notes = generate_notes_from_transcript_llama_cpp_local(transcript)
     elif method == NotesMethod.deepseek_openrouter_api:
-        notes = generate_notes_from_transcript_deepseek_openrouter_api(transcript)
+        notes = generate_notes_from_transcript_deepseek_openrouter_api(
+            transcript, query_prompt
+        )
+    elif method == NotesMethod.gemini_openrouter_api:
+        notes = generate_notes_from_transcript_gemini_openrouter_api(
+            transcript, query_prompt
+        )
+    elif method == NotesMethod.qwen_openrouter_api:
+        notes = generate_notes_from_transcript_qwen_openrouter_api(
+            transcript, query_prompt
+        )
     elif method == NotesMethod.dummy:
         notes = "dummy transcript"
     else:

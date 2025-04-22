@@ -1,4 +1,7 @@
-import whisper
+try:
+    import whisper
+except ImportError:
+    whisper = None
 
 import os
 import requests
@@ -16,6 +19,9 @@ class TranscriptionMethod(str, Enum):
 def transcribe_with_whisper(
     path: str, query_lang=None, query_prompt=None, query_audio_kind=None
 ) -> str:
+    if whisper is None:
+        raise ImportError("Whisper module is not installed.")
+
     model = whisper.load_model("turbo")
 
     # Build initial_prompt from parameters with null checking

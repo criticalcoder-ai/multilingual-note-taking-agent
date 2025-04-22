@@ -1,5 +1,6 @@
-from fastapi import FastAPI, File, HTTPException, Query, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 import shutil
@@ -20,7 +21,7 @@ from sqlalchemy.orm import joinedload
 app = FastAPI()
 
 
-@app.get("/")
+@app.get("/hello")
 async def root():
     return {"message": "Hello voice ai"}
 
@@ -47,10 +48,10 @@ def transcribe_worker(
     q.put(result)
 
 
-def notes_worker(q, transcription, method):
+def notes_worker(q, transcription, method, query_prompt=None):
     from model.model import generate_notes_from_transcript
 
-    result = generate_notes_from_transcript(transcription, method)
+    result = generate_notes_from_transcript(transcription, method, query_prompt)
     q.put(result)
 
 
@@ -63,7 +64,7 @@ async def transcribe_audio(
     """
     to check this route use this curl cmd with a sample file
     ``sh
-    curl -X POST localhost:5000/api/transcribe-audio/?method=alibaba_asr_api \
+    curl -X POST "localhost:5000/api/transcribe-audio/?method=alibaba_asr_api" \
         -F "file=@voice_sample.mp3" \
     ``
     """
@@ -107,20 +108,19 @@ class TranscriptionInput(BaseModel):
 
 
 # DEPRECATED: use only for local testing
-@app.post("/api/notes-from-transcription-text")
+@app.post("/api/notes-from-transcription-text/")
 async def notes_from_transcription_text(
     input_data: TranscriptionInput,
-    method: NotesMethod = NotesMethod.deepseek_openrouter_api,
+    method: NotesMethod = Query(default=NotesMethod.qwen_openrouter_api),
 ):
     """
     to check notes generation from transcription only
     ``sh
-    curl -X POST localhost:5000/api/notes-from-transcription-text \
+    curl -X POST "localhost:5000/api/notes-from-transcription-text/?method=dummy" \
         -H 'Content-Type: application/json' \
         -d '{
-          "transcription_text": "jason, bond, momo, blah, blah",
-          "method": "deepseek_openrouter_api"
-        }'
+             "transcription_text": "jason, bond, momo, blah, blah"
+           }'
     ``
     """
     print(f"hello from route {input_data.transcription_text=}")
@@ -149,9 +149,9 @@ async def transcribe_and_generate_notes(
     ),
     notes_method: NotesMethod = Query(default=NotesMethod.deepseek_openrouter_api),
     session_name: str = Query(default="default-session-name"),
-    query_lang: str = Query(default="default-query-lang"),
-    query_prompt: str = Query(default="default-query-prompt"),
-    query_audio_kind: str = Query(default="default-query-audio-kind"),
+    query_lang: str = Query(default="en"),
+    query_prompt: str = Query(default=""),
+    query_audio_kind: str = Query(default="meeting"),
 ):
     """
     Does both transcription and notes generation, and returns both.
@@ -210,7 +210,9 @@ async def transcribe_and_generate_notes(
 
     # Step 2: Run notes generation in isolated process
     notes_q = Queue()
-    notes_p = Process(target=notes_worker, args=(notes_q, transcription, notes_method))
+    notes_p = Process(
+        target=notes_worker, args=(notes_q, transcription, notes_method, query_prompt)
+    )
     notes_p.start()
     notes_p.join()
 
@@ -464,8 +466,27 @@ async def search_audio_sessions(search_text: str = Query(..., min_length=1)):
     return results
 
 
+# TODO: sometimes all of these fails - there could be redundancy too,  modify later
+frontend_dist = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+
+app.mount(
+    "/assets",
+    StaticFiles(directory=os.path.join(frontend_dist, "assets")),
+    name="assets",
+)
+app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="static")
+
+
+@app.get("/{full_path:path}")
+async def serve_react(full_path: str, request: Request):
+    # Return the index.html file for all client-side routes
+    return FileResponse(os.path.join(frontend_dist, "index.html"))
+
+
 if __name__ == "__main__":
     import uvicorn
+    import sys
+    import os
 
     # Run the DB setup (this will create tables)
     setup_db()
@@ -473,4 +494,9 @@ if __name__ == "__main__":
     add_dummy_data()
     view_db()
 
-    uvicorn.run("main:app", host="localhost", port=5000, log_level="info")
+    is_prod = "--prod" in sys.argv
+    host = "0.0.0.0" if is_prod else "localhost"
+    port = int(os.environ.get("PORT", 5000)) if is_prod else 5000
+    log_level = "info"
+
+    uvicorn.run("main:app", host=host, port=port, log_level=log_level)
