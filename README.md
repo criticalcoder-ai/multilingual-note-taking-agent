@@ -27,8 +27,14 @@ Voice AI
 - `pip install -r requirements.txt` to install the requirements in the current environment
     - llama-cpp-python might need special reinstallation for setting up gpu backend correctly
 
+## frontend
+- `npm install`
+
 # how to run?
 
 ## backend
 - `cd <repo>/backend`
 - `python main.py`
+
+## frontend - (also backend serves the ui from `frontend/dist` when available)
+- `npm run dev`
