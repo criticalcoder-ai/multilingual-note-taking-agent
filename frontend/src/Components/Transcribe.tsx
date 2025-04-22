@@ -18,6 +18,7 @@ import ListItemText from "@mui/material/ListItemText";
 import MailIcon from "@mui/icons-material/Mail";
 import LanguageDropdown from "./Dropdown";
 import AudioDropzone from "./AudioDropzone";
+import { useState } from "react";
 
 const drawerWidth = 250;
 
@@ -87,7 +88,7 @@ const languageOptions = [
 
 export default function PersistentDrawerLeft() {
   const theme = useTheme();
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = useState(false);
 
   const handleDrawerOpen = () => {
     setOpen(true);
