@@ -484,6 +484,8 @@ async def serve_react(full_path: str, request: Request):
 
 if __name__ == "__main__":
     import uvicorn
+    import sys
+    import os
 
     # Run the DB setup (this will create tables)
     setup_db()
@@ -491,4 +493,9 @@ if __name__ == "__main__":
     add_dummy_data()
     view_db()
 
-    uvicorn.run("main:app", host="localhost", port=5000, log_level="info")
+    is_prod = "--prod" in sys.argv
+    host = "0.0.0.0" if is_prod else "localhost"
+    port = int(os.environ.get("PORT", 5000)) if is_prod else 5000
+    log_level = "info"
+
+    uvicorn.run("main:app", host=host, port=port, log_level=log_level)
