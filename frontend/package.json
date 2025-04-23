@@ -19,6 +19,7 @@
     "@tanstack/react-query": "^5.74.4",
     "@tanstack/react-router": "^1.116.0",
     "axios": "^1.8.4",
+    "cors": "^2.8.5",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.1",
     "prettier": "^3.5.3",

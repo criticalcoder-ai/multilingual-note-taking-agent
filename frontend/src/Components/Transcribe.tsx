@@ -27,11 +27,23 @@ import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 import SearchIcon from '@mui/icons-material/Search';
 import { useNavigate, useParams } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 
 import { copyToClipboard } from "../utils";
 import LanguageDropdown from "./Dropdown";
 import AudioDropzone from "./AudioDropzone";
 import Autoselect from "./Autoselect";
+
+interface Session {
+  id: number;
+  session_name: string;
+  query_lang: string;
+  query_prompt: string;
+  created_time: string;
+  query_file: string;
+  query_audio_kind: string;
+}
 
 
 const drawerWidth = 250;
@@ -98,12 +110,11 @@ const languageOptions = [
   { label: "English (Default)", value: "english" },
   { label: "Mandarin (Traditional)", value: "mandarin" },
   { label: "Simplified Chinese", value: "simplified_chinese" },
-  { label: "French", value: "french-fr" },
-  { label: "Spanish (Spain)", value: "spain-es" },
-  { label: "Spanish (Mexico)", value: "spain-mx" },
-  { label: "Portuguese (Portugal)", value: "portuguese-pg" },
-  { label: "Portuguese (brazil)", value: "portuguese-bz" },
-  { label: "German", value: "german-de" },
+  { label: "French", value: "french" },
+  { label: "Spanish", value: "spanish" },
+  { label: "Portuguese", value: "portuguese" },
+  { label: "Japanese", value: "japanese" },
+  { label: "German", value: "german" },
 ];
 
 const transcribedTexts = {
@@ -125,31 +136,42 @@ export default function PersistentDrawerLeft() {
 
   const [sendState, setSendState] = useState(true);
 
-  // TODO: To replace with API call to fetch session inventory
-  const chats = ["Session 1", "Session 2", "Session 3", "Session 4", "Session 5", "Session 6", "Session 7", "Session 8", "Session 9", "Session 10", "Session 11", "Session 12", "Session 13", "Session 14", "Session 15", "Session 16", "Session 17", "Session 18", "Session 19", "Session 20"];
+  // API Endpoint: 
+  const { data: sessions = [], isLoading, isError, error } = useQuery({
+    queryKey: ['audio-sessions'],
+    queryFn: async () => {
+      try {
+        const res = await axios.get('http://localhost:5000/api/audio-sessions/');
+        
+        // Validate response structure
+        if (!Array.isArray(res.data)) {
+          throw new Error('Invalid response format: expected array');
+        }
+        
+        return res.data;
+      } catch (err) {
+        // Transform Axios errors for better error messages
+        if (axios.isAxiosError(err)) {
+          throw new Error(err.response?.data?.message || err.message);
+        }
+        throw err;
+      }
+    }
+  });
 
   useEffect(() => {
-    // Simulate fetching from API
-    const fetchSession = async () => {
-      // Simulated response based on chatId
-      const sessionData = {
-        session_name: chatId,
-        id: 1,
-        query_lang: "french-fr",
-        query_prompt: `This is a prompt for ${chatId}`,
-        created_time: "2025-04-07T21:53:58.141675",
-        query_file: `audio_file_${chatId}.mp3`,
-        query_audio_kind: "ambient"
-      };
-      setSelectedLanguage(sessionData.query_lang.toLowerCase());
-      setPrompt(sessionData.query_prompt);
-      setAudioFileName(sessionData.query_file);
-    };
-    fetchSession();
-  }, [chatId]);
+    if (sessions.length > 0 && chatId) {
+      const session = sessions.find((s: Session) => s.session_name === chatId);
+      if (session) {
+        setSelectedLanguage(session.query_lang.toLowerCase());
+        setPrompt(session.query_prompt);
+        setAudioFileName(session.query_file);
+      }
+    }
+  }, [sessions, chatId]);
 
-  const filteredChats = chats.filter((chat) =>
-    chat.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredChats = sessions.filter((session: Session) =>
+    session.session_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleCopy = async () => {
@@ -160,6 +182,14 @@ export default function PersistentDrawerLeft() {
 
   const handleDrawerOpen = () => setOpen(true);
   const handleDrawerClose = () => setOpen(false);
+
+  if (isLoading) {
+    return <Typography>Loading sessions...</Typography>;
+  }
+  
+  if (isError) {
+    return <Typography>Error fetching sessions. {error?.message}</Typography>;
+  }
 
   return (
     <Box
@@ -189,6 +219,7 @@ export default function PersistentDrawerLeft() {
           </Typography>
         </Toolbar>
       </AppBar>
+
       <Drawer
   sx={{
     width: drawerWidth,
@@ -213,11 +244,11 @@ export default function PersistentDrawerLeft() {
       ...theme.mixins.toolbar,
     }}
   >
-    {theme.direction === "ltr" && (
-      <Typography variant="h6" gutterBottom align="left" marginLeft={1.5}>
-        History
-      </Typography>
-    )}
+    
+    <Typography variant="h6" marginLeft={1.5}>
+      History
+    </Typography>
+    
     <IconButton onClick={handleDrawerClose}>
       {theme.direction === "ltr" ? <ChevronLeftIcon /> : <ChevronRightIcon />}
     </IconButton>
@@ -247,7 +278,6 @@ export default function PersistentDrawerLeft() {
     />
   </Box>
 
-  {/* Chat List with overflow */}
   <List
     sx={{
       flex: 1,
@@ -255,13 +285,13 @@ export default function PersistentDrawerLeft() {
     }}
   >
     {filteredChats.length > 0 ? (
-      filteredChats.map((text) => (
-        <ListItem key={text} disablePadding>
-          <ListItemButton onClick={() => navigate({ to: `/chat/${text}` })}>
+      filteredChats.map((session: Session) => (
+        <ListItem key={session.id} disablePadding>
+          <ListItemButton onClick={() => navigate({ to: `/chat/${session.session_name}` })}>
             <ListItemIcon>
               <MailIcon />
             </ListItemIcon>
-            <ListItemText primary={text} />
+            <ListItemText primary={session.session_name} />
           </ListItemButton>
         </ListItem>
       ))
@@ -298,11 +328,20 @@ export default function PersistentDrawerLeft() {
     <SendIcon sx={{ marginRight: 1 }} />
     New Chat
   </Box>
-</Drawer>
+      </Drawer>
 
       <Main open={open} sx={{ height: "100%" }}>
         <DrawerHeader />
-        <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>Session: {chatId}</Typography>
+        <Typography 
+          sx={{ 
+            color: 'black', 
+            mb: 2 
+          }}
+          fontSize="1.5rem"
+          fontWeight="bold"
+        >
+          {chatId}
+        </Typography>
         <Box
           sx={{
             display: "flex",
