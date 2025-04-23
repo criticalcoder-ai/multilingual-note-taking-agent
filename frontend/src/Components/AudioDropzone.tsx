@@ -1,30 +1,25 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { Box, Typography, IconButton } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 
 interface AudioDropzoneProps {
   onFileAccepted: (file: File | null) => void;
+  fileName?: string | null;
 }
 
-const AudioDropzone: React.FC<AudioDropzoneProps> = ({ onFileAccepted }) => {
-  const [fileName, setFileName] = useState<string | null>(null);
-
+const AudioDropzone: React.FC<AudioDropzoneProps> = ({ onFileAccepted, fileName }) => {
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       if (acceptedFiles.length > 0) {
         const file = acceptedFiles[0];
-        const trimmedName =
-          file.name.length > 15 ? `${file.name.slice(0, 15)}...` : file.name;
-        setFileName(trimmedName);
         onFileAccepted(file);
       }
     },
-    [onFileAccepted],
+    [onFileAccepted]
   );
 
   const handleClear = () => {
-    setFileName(null);
     onFileAccepted(null);
   };
 
@@ -35,6 +30,12 @@ const AudioDropzone: React.FC<AudioDropzoneProps> = ({ onFileAccepted }) => {
     },
     multiple: false,
   });
+
+  const trimmedName = fileName
+    ? fileName.length > 15
+      ? `${fileName.slice(0, 15)}...`
+      : fileName
+    : null;
 
   return (
     <Box
@@ -64,14 +65,17 @@ const AudioDropzone: React.FC<AudioDropzoneProps> = ({ onFileAccepted }) => {
       }}
     >
       <input {...getInputProps()} />
-      {fileName ? (
+      {trimmedName ? (
         <>
           <Typography variant="body1" noWrap>
-            {fileName}
+            {trimmedName}
           </Typography>
-          <IconButton
-            size="small"
-            onClick={handleClear}
+          <IconButton 
+            size="small" 
+            onClick={(e) => {
+              e.stopPropagation(); 
+              handleClear();}
+            } 
             sx={{ color: "white" }}
           >
             <DeleteIcon fontSize="small" />
@@ -79,9 +83,7 @@ const AudioDropzone: React.FC<AudioDropzoneProps> = ({ onFileAccepted }) => {
         </>
       ) : (
         <Typography variant="body1">
-          {isDragActive
-            ? "Drop the audio here..."
-            : "Upload or drop audio file here"}
+          {isDragActive ? "Drop the audio here..." : "Upload or drop audio file here"}
         </Typography>
       )}
     </Box>

@@ -1,8 +1,9 @@
 import { styled, useTheme } from "@mui/material/styles";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
 import Box from "@mui/material/Box";
+import ReplayIcon from '@mui/icons-material/Replay';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import Drawer from "@mui/material/Drawer";
 import CssBaseline from "@mui/material/CssBaseline";
@@ -25,6 +26,7 @@ import ExportPdfButton from "./ExportPDF";
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 import SearchIcon from '@mui/icons-material/Search';
+import { useNavigate, useParams } from "@tanstack/react-router";
 
 import { copyToClipboard } from "../utils";
 import LanguageDropdown from "./Dropdown";
@@ -96,6 +98,12 @@ const languageOptions = [
   { label: "English (Default)", value: "english" },
   { label: "Mandarin (Traditional)", value: "mandarin" },
   { label: "Simplified Chinese", value: "simplified_chinese" },
+  { label: "French", value: "french-fr" },
+  { label: "Spanish (Spain)", value: "spain-es" },
+  { label: "Spanish (Mexico)", value: "spain-mx" },
+  { label: "Portuguese (Portugal)", value: "portuguese-pg" },
+  { label: "Portuguese (brazil)", value: "portuguese-bz" },
+  { label: "German", value: "german-de" },
 ];
 
 const transcribedTexts = {
@@ -105,12 +113,41 @@ const transcribedTexts = {
 
 export default function PersistentDrawerLeft() {
   const theme = useTheme();
+  const navigate = useNavigate();
+  const { chatId } = useParams({ strict: false }) || { chatId: '1'};
 
   const [open, setOpen] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
-
   const [searchTerm, setSearchTerm] = useState("");
-  const chats = ["Chat 1", "Chat 2", "Chat 3", "Chat 4", "Chat 5", "Chat 6", "Chat 7", "Chat 8", "Chat 9", "Chat 10"];
+  const [selectedLanguage, setSelectedLanguage] = useState("english");
+  const [prompt, setPrompt] = useState("");
+  const [audioFileName, setAudioFileName] = useState("");
+
+  const [sendState, setSendState] = useState(true);
+
+  // TODO: To replace with API call to fetch session inventory
+  const chats = ["Session 1", "Session 2", "Session 3", "Session 4", "Session 5", "Session 6", "Session 7", "Session 8", "Session 9", "Session 10", "Session 11", "Session 12", "Session 13", "Session 14", "Session 15", "Session 16", "Session 17", "Session 18", "Session 19", "Session 20"];
+
+  useEffect(() => {
+    // Simulate fetching from API
+    const fetchSession = async () => {
+      // Simulated response based on chatId
+      const sessionData = {
+        session_name: chatId,
+        id: 1,
+        query_lang: "french-fr",
+        query_prompt: `This is a prompt for ${chatId}`,
+        created_time: "2025-04-07T21:53:58.141675",
+        query_file: `audio_file_${chatId}.mp3`,
+        query_audio_kind: "ambient"
+      };
+      setSelectedLanguage(sessionData.query_lang.toLowerCase());
+      setPrompt(sessionData.query_prompt);
+      setAudioFileName(sessionData.query_file);
+    };
+    fetchSession();
+  }, [chatId]);
+
   const filteredChats = chats.filter((chat) =>
     chat.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -121,13 +158,8 @@ export default function PersistentDrawerLeft() {
     console.log(success ? "Text copied to clipboard!" : "Failed to copy text.");
   };
 
-  const handleDrawerOpen = () => {
-    setOpen(true);
-  };
-
-  const handleDrawerClose = () => {
-    setOpen(false);
-  };
+  const handleDrawerOpen = () => setOpen(true);
+  const handleDrawerClose = () => setOpen(false);
 
   return (
     <Box
@@ -158,85 +190,119 @@ export default function PersistentDrawerLeft() {
         </Toolbar>
       </AppBar>
       <Drawer
-        sx={{
-          width: drawerWidth,
-          flexShrink: 0,
-          "& .MuiDrawer-paper": {
-            width: drawerWidth,
-            boxSizing: "border-box",
-          },
-        }}
-        variant="persistent"
-        anchor="left"
-        open={open}
-      >
-        <DrawerHeader
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: theme.spacing(0, 1),
-            ...theme.mixins.toolbar,
-          }}
-        >
-          {theme.direction === "ltr" && (
-            <Typography variant="h6" gutterBottom align="left" marginLeft={1.5}>
-              {" "}
-              History{" "}
-            </Typography>
-          )}
-          <IconButton onClick={handleDrawerClose}>
-            {theme.direction === "ltr" ? (
-              <ChevronLeftIcon />
-            ) : (
-              <ChevronRightIcon />
-            )}
-          </IconButton>
-        </DrawerHeader>
-        <Divider />
-        <Box sx={{ padding: 1 }}>
-          <TextField
-            fullWidth
-            variant="outlined"
-            size="small"
-            placeholder="Search chats..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-            sx={{
-              backgroundColor: 'white',
-              borderRadius: 1,
-            }}
-          />
-        </Box>
-        <List>
-          {filteredChats.length > 0 ? (
-            filteredChats.map((text) => (
-              <ListItem key={text} disablePadding>
-                <ListItemButton>
-                  <ListItemIcon>
-                    <MailIcon />
-                  </ListItemIcon>
-                  <ListItemText primary={text} />
-                </ListItemButton>
-              </ListItem>
-            ))
-          ) : (
-            <ListItem>
-              <ListItemText primary="No results found." />
-            </ListItem>
-          )}
-        </List>
+  sx={{
+    width: drawerWidth,
+    flexShrink: 0,
+    "& .MuiDrawer-paper": {
+      width: drawerWidth,
+      boxSizing: "border-box",
+      display: "flex",
+      flexDirection: "column",
+    },
+  }}
+  variant="persistent"
+  anchor="left"
+  open={open}
+>
+  <DrawerHeader
+    sx={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: theme.spacing(0, 1),
+      ...theme.mixins.toolbar,
+    }}
+  >
+    {theme.direction === "ltr" && (
+      <Typography variant="h6" gutterBottom align="left" marginLeft={1.5}>
+        History
+      </Typography>
+    )}
+    <IconButton onClick={handleDrawerClose}>
+      {theme.direction === "ltr" ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+    </IconButton>
+  </DrawerHeader>
 
-      </Drawer>
+  <Divider />
+
+  <Box sx={{ padding: 1 }}>
+    <TextField
+      fullWidth
+      variant="outlined"
+      size="small"
+      placeholder="Search chats..."
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      InputProps={{
+        startAdornment: (
+          <InputAdornment position="start">
+            <SearchIcon />
+          </InputAdornment>
+        ),
+      }}
+      sx={{
+        backgroundColor: "white",
+        borderRadius: 1,
+      }}
+    />
+  </Box>
+
+  {/* Chat List with overflow */}
+  <List
+    sx={{
+      flex: 1,
+      overflowY: "auto",
+    }}
+  >
+    {filteredChats.length > 0 ? (
+      filteredChats.map((text) => (
+        <ListItem key={text} disablePadding>
+          <ListItemButton onClick={() => navigate({ to: `/chat/${text}` })}>
+            <ListItemIcon>
+              <MailIcon />
+            </ListItemIcon>
+            <ListItemText primary={text} />
+          </ListItemButton>
+        </ListItem>
+      ))
+    ) : (
+      <ListItem>
+        <ListItemText primary="No results found." />
+      </ListItem>
+    )}
+  </List>
+
+  {/* New Chat button anchored at bottom */}
+  <Box
+    sx={{
+      alignSelf: "center",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      border: "1px solid black",
+      borderRadius: "8px",
+      paddingX: 4,
+      paddingY: 1,
+      margin: 2,
+      cursor: "pointer",
+      color: "black",
+      "&:hover": {
+        backgroundColor: "black",
+        color: "white",
+      },
+    }}
+    onClick={() => {
+      // handle new chat logic here
+    }}
+  >
+    <SendIcon sx={{ marginRight: 1 }} />
+    New Chat
+  </Box>
+</Drawer>
+
       <Main open={open} sx={{ height: "100%" }}>
         <DrawerHeader />
+        <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>Session: {chatId}</Typography>
         <Box
           sx={{
             display: "flex",
@@ -254,9 +320,9 @@ export default function PersistentDrawerLeft() {
           >
             <Box sx={{ flex: 1 }}>
               <AudioDropzone
+                fileName={audioFileName}
                 onFileAccepted={(file) => {
                   console.log("Accepted file:", file);
-                  // TODO: File will be handled here
                 }}
               />
             </Box>
@@ -277,8 +343,8 @@ export default function PersistentDrawerLeft() {
             >
               <LanguageDropdown
                 options={languageOptions}
-                defaultValue="english"
-                onChange={(val) => console.log("Selected language:", val)}
+                value={selectedLanguage}
+                onChange={(val) => setSelectedLanguage(val)}
               />
             </Box>
           </Box>
@@ -287,6 +353,8 @@ export default function PersistentDrawerLeft() {
 
           <Box
             component="textarea"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
             placeholder="Enter your prompt here:"
             rows={4}
             sx={{
@@ -316,9 +384,11 @@ export default function PersistentDrawerLeft() {
                 backgroundColor: "green",
               },
             }}
+
+            onClick={() => {}}
           >
-            <SendIcon sx={{ marginRight: 1 }} />
-            Send
+            {sendState ? (<SendIcon sx={{ marginRight: 1 }} />) : (<ReplayIcon sx={{ marginRight: 1 }} />)}
+            {sendState ? ("Send") : ("Retry")}
           </Box>
         </Box>
 
@@ -356,7 +426,7 @@ export default function PersistentDrawerLeft() {
                 value={activeTab}
                 onChange={(event, newValue) => setActiveTab(newValue)}
                 textColor="inherit"
-                indicatorColor="secondary"
+                indicatorColor="primary"
                 aria-label="transcription and notes tabs"
                 sx={{
                   borderBottom: 1,
@@ -381,12 +451,20 @@ export default function PersistentDrawerLeft() {
               }}
             >
               {activeTab === 0 && (
-                <Typography>
+                <Typography
+                  sx={{
+                    padding: 0,
+                  }}
+                >
                   {transcribedTexts.notes}
                 </Typography>
               )}
               {activeTab === 1 && (
-                <Typography>
+                <Typography
+                  sx={{
+                    padding: 0,
+                  }}
+                >
                   {transcribedTexts.transcription}
                 </Typography>
               )}
