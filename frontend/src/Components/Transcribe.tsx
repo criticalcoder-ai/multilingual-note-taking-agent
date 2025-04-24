@@ -20,6 +20,8 @@ import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
+import AddCommentIcon from '@mui/icons-material/AddComment';
+import Button from "@mui/material/Button";
 import SendIcon from '@mui/icons-material/Send';
 import MailIcon from "@mui/icons-material/Mail";
 import ExportPdfButton from "./ExportPDF";
@@ -34,6 +36,7 @@ import { copyToClipboard } from "../utils";
 import LanguageDropdown from "./Dropdown";
 import AudioDropzone from "./AudioDropzone";
 import Autoselect from "./Autoselect";
+import MarkdownText from "./MarkdownText";
 
 interface Session {
   id: number;
@@ -130,9 +133,9 @@ export default function PersistentDrawerLeft() {
   const [open, setOpen] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedLanguage, setSelectedLanguage] = useState("english");
-  const [prompt, setPrompt] = useState("");
-  const [audioFileName, setAudioFileName] = useState("");
+  const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
+  const [prompt, setPrompt] = useState<string | null>(null);
+  const [audioFileName, setAudioFileName] = useState<string | null>(null);
 
   const [sendState, setSendState] = useState(true);
 
@@ -143,14 +146,12 @@ export default function PersistentDrawerLeft() {
       try {
         const res = await axios.get('http://localhost:5000/api/audio-sessions/');
         
-        // Validate response structure
         if (!Array.isArray(res.data)) {
           throw new Error('Invalid response format: expected array');
         }
         
         return res.data;
       } catch (err) {
-        // Transform Axios errors for better error messages
         if (axios.isAxiosError(err)) {
           throw new Error(err.response?.data?.message || err.message);
         }
@@ -158,6 +159,21 @@ export default function PersistentDrawerLeft() {
       }
     }
   });
+
+  const newSession = async () => {
+    try {
+      const res = await axios.get('http://localhost:5000/api/audio-sessions/new');
+      const newSessionId = res.data;
+      console.log("New session created with ID:", newSessionId);
+  
+      // Navigate to new chat page with that session ID
+      navigate({ to: `/chat/${newSessionId}` });
+    } catch (error) {
+      console.error("Error creating new session: ", error);
+    }
+    
+  }
+
 
   useEffect(() => {
     if (sessions.length > 0 && chatId) {
@@ -221,114 +237,115 @@ export default function PersistentDrawerLeft() {
       </AppBar>
 
       <Drawer
-  sx={{
-    width: drawerWidth,
-    flexShrink: 0,
-    "& .MuiDrawer-paper": {
-      width: drawerWidth,
-      boxSizing: "border-box",
-      display: "flex",
-      flexDirection: "column",
-    },
-  }}
-  variant="persistent"
-  anchor="left"
-  open={open}
->
-  <DrawerHeader
-    sx={{
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      padding: theme.spacing(0, 1),
-      ...theme.mixins.toolbar,
-    }}
-  >
-    
-    <Typography variant="h6" marginLeft={1.5}>
-      History
-    </Typography>
-    
-    <IconButton onClick={handleDrawerClose}>
-      {theme.direction === "ltr" ? <ChevronLeftIcon /> : <ChevronRightIcon />}
-    </IconButton>
-  </DrawerHeader>
+        sx={{
+          width: drawerWidth,
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: drawerWidth,
+            boxSizing: "border-box",
+            display: "flex",
+            flexDirection: "column",
+          },
+        }}
+        variant="persistent"
+        anchor="left"
+        open={open}
+      >
+        <DrawerHeader
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: theme.spacing(0, 1),
+            ...theme.mixins.toolbar,
+          }}
+        >
+          
+          <Typography variant="h6" marginLeft={1.5}>
+            History
+          </Typography>
+          
+          <IconButton onClick={handleDrawerClose}>
+            {theme.direction === "ltr" ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+          </IconButton>
+        </DrawerHeader>
 
-  <Divider />
+      <Divider />
 
-  <Box sx={{ padding: 1 }}>
-    <TextField
-      fullWidth
-      variant="outlined"
-      size="small"
-      placeholder="Search chats..."
-      value={searchTerm}
-      onChange={(e) => setSearchTerm(e.target.value)}
-      InputProps={{
-        startAdornment: (
-          <InputAdornment position="start">
-            <SearchIcon />
-          </InputAdornment>
-        ),
-      }}
-      sx={{
-        backgroundColor: "white",
-        borderRadius: 1,
-      }}
-    />
-  </Box>
+      <Box sx={{ padding: 1 }}>
+        <TextField
+          fullWidth
+          variant="outlined"
+          size="small"
+          placeholder="Search chats..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+          sx={{
+            backgroundColor: "white",
+            borderRadius: 1,
+          }}
+        />
+      </Box>
 
-  <List
-    sx={{
-      flex: 1,
-      overflowY: "auto",
-    }}
-  >
-    {filteredChats.length > 0 ? (
-      filteredChats.map((session: Session) => (
-        <ListItem key={session.id} disablePadding>
-          <ListItemButton onClick={() => navigate({ to: `/chat/${session.session_name}` })}>
-            <ListItemIcon>
-              <MailIcon />
-            </ListItemIcon>
-            <ListItemText primary={session.session_name} />
-          </ListItemButton>
-        </ListItem>
-      ))
-    ) : (
-      <ListItem>
-        <ListItemText primary="No results found." />
-      </ListItem>
-    )}
-  </List>
+      <List
+        sx={{
+          flex: 1,
+          overflowY: "auto",
+        }}
+      >
+        {filteredChats.length > 0 ? (
+          filteredChats.map((session: Session) => (
+            <ListItem key={session.id} disablePadding>
+              <ListItemButton onClick={() => navigate({ to: `/chat/${session.session_name}` })}>
+                <ListItemIcon>
+                  <MailIcon />
+                </ListItemIcon>
+                <ListItemText primary={session.session_name} />
+              </ListItemButton>
+            </ListItem>
+          ))
+        ) : (
+          <ListItem>
+            <ListItemText primary="No results found." />
+          </ListItem>
+        )}
+      </List>
 
-  {/* New Chat button anchored at bottom */}
-  <Box
-    sx={{
-      alignSelf: "center",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      border: "1px solid black",
-      borderRadius: "8px",
-      paddingX: 4,
-      paddingY: 1,
-      margin: 2,
-      cursor: "pointer",
-      color: "black",
-      "&:hover": {
-        backgroundColor: "black",
-        color: "white",
-      },
-    }}
-    onClick={() => {
-      // handle new chat logic here
-    }}
-  >
-    <SendIcon sx={{ marginRight: 1 }} />
-    New Chat
-  </Box>
-      </Drawer>
+      <Button 
+        variant="outlined"
+        startIcon={<AddCommentIcon />}
+        sx={{
+          alignSelf: "center",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          border: "1px solid black",
+          borderRadius: "8px",
+          paddingX: 4,
+          paddingY: 1,
+          margin: 2,
+          cursor: "pointer",
+          color: "black",
+          "&:hover": {
+            backgroundColor: "black",
+            color: "white",
+          },
+        }}
+        onClick={() => {
+          newSession();
+
+        }}
+      >
+        New Chat
+      </Button>
+    </Drawer>
 
       <Main open={open} sx={{ height: "100%" }}>
         <DrawerHeader />
@@ -358,12 +375,18 @@ export default function PersistentDrawerLeft() {
             sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}
           >
             <Box sx={{ flex: 1 }}>
-              <AudioDropzone
-                fileName={audioFileName}
-                onFileAccepted={(file) => {
+            <AudioDropzone
+              fileName={audioFileName}
+              onFileAccepted={(file) => {
+                if (file) {
+                  setAudioFileName(file.name);
                   console.log("Accepted file:", file);
-                }}
-              />
+                } else {
+                  setAudioFileName(null);
+                  console.log("File removed");
+                }
+              }}
+            />
             </Box>
 
             <Box
@@ -407,7 +430,8 @@ export default function PersistentDrawerLeft() {
             }}
           />
 
-          <Box
+          <Button 
+            variant="outlined"
             sx={{
               alignSelf: "center",
               display: "flex",
@@ -424,11 +448,11 @@ export default function PersistentDrawerLeft() {
               },
             }}
 
-            onClick={() => {}}
+            onClick={() => {setSendState(false)}}
           >
             {sendState ? (<SendIcon sx={{ marginRight: 1 }} />) : (<ReplayIcon sx={{ marginRight: 1 }} />)}
             {sendState ? ("Send") : ("Retry")}
-          </Box>
+          </Button>
         </Box>
 
         <Box
@@ -490,23 +514,18 @@ export default function PersistentDrawerLeft() {
               }}
             >
               {activeTab === 0 && (
-                <Typography
-                  sx={{
-                    padding: 0,
-                  }}
-                >
-                  {transcribedTexts.notes}
-                </Typography>
+                <MarkdownText
+                  transcription={transcribedTexts.transcription}
+                  language={selectedLanguage}
+                  audioFileName={audioFileName}
+                />
               )}
               {activeTab === 1 && (
-                <Typography
-                  sx={{
-                    padding: 0,
-                  }}
-                >
-                  {transcribedTexts.transcription}
-                </Typography>
-              )}
+                <MarkdownText
+                transcription={transcribedTexts.notes}
+                language={selectedLanguage}
+                audioFileName={audioFileName}
+              />)}
             </Box>
 
 
