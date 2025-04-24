@@ -133,9 +133,9 @@ export default function PersistentDrawerLeft() {
   const [open, setOpen] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
-  const [prompt, setPrompt] = useState<string | null>(null);
-  const [audioFileName, setAudioFileName] = useState<string | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState<string>("english");
+  const [prompt, setPrompt] = useState<string>("");
+  const [audioFileName, setAudioFileName] = useState<string>("");
 
   const [sendState, setSendState] = useState(true);
 
@@ -382,7 +382,7 @@ export default function PersistentDrawerLeft() {
                   setAudioFileName(file.name);
                   console.log("Accepted file:", file);
                 } else {
-                  setAudioFileName(null);
+                  setAudioFileName("");
                   console.log("File removed");
                 }
               }}
@@ -487,7 +487,7 @@ export default function PersistentDrawerLeft() {
             >
               <Tabs
                 value={activeTab}
-                onChange={(event, newValue) => setActiveTab(newValue)}
+                onChange={(_, newValue) => setActiveTab(newValue)}
                 textColor="inherit"
                 indicatorColor="primary"
                 aria-label="transcription and notes tabs"

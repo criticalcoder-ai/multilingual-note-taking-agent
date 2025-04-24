@@ -20,7 +20,7 @@ export default function TagSelector() {
         options={[]}
         freeSolo
         value={selectedTags}
-        onChange={(event, newValue) => {
+        onChange={(_, newValue) => {
           setSelectedTags(newValue);
         }}
         renderTags={(value, getTagProps) =>

@@ -8,6 +8,7 @@ import os
 import datetime
 from typing import Optional
 from multiprocessing import Process, Queue
+from fastapi.middleware.cors import CORSMiddleware
 
 from sqlalchemy import desc, or_, case
 
@@ -19,6 +20,14 @@ from db.db_util import add_dummy_data, view_db
 from sqlalchemy.orm import joinedload
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/hello")
