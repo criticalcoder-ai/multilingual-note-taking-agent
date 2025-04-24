@@ -2,7 +2,7 @@ import React, { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { Typography, IconButton } from "@mui/material";
 import Button from "@mui/material/Button";
-import MusicNoteIcon from '@mui/icons-material/MusicNote';
+import MusicNoteIcon from "@mui/icons-material/MusicNote";
 import DeleteIcon from "@mui/icons-material/Delete";
 
 interface AudioDropzoneProps {
@@ -10,15 +10,18 @@ interface AudioDropzoneProps {
   fileName?: string | null;
 }
 
-const AudioDropzone: React.FC<AudioDropzoneProps> = ({ onFileAccepted, fileName }) => {
+const AudioDropzone: React.FC<AudioDropzoneProps> = ({
+  onFileAccepted,
+  fileName,
+}) => {
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       if (acceptedFiles.length > 0) {
         const file = acceptedFiles[0];
-        onFileAccepted(file);  // Notify parent with new file
+        onFileAccepted(file); // Notify parent with new file
       }
     },
-    [onFileAccepted]
+    [onFileAccepted],
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -31,7 +34,7 @@ const AudioDropzone: React.FC<AudioDropzoneProps> = ({ onFileAccepted, fileName 
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onFileAccepted(null);  // Reset in parent
+    onFileAccepted(null); // Reset in parent
   };
 
   const displayName = fileName
@@ -46,11 +49,11 @@ const AudioDropzone: React.FC<AudioDropzoneProps> = ({ onFileAccepted, fileName 
       {...getRootProps()}
       sx={{
         flex: 1,
-        width: '100%',
+        width: "100%",
         border: "1px dashed white",
         borderRadius: "8px",
         textAlign: "center",
-        textTransform: 'none',
+        textTransform: "none",
         py: 2,
         px: 3,
         cursor: "pointer",
@@ -76,8 +79,8 @@ const AudioDropzone: React.FC<AudioDropzoneProps> = ({ onFileAccepted, fileName 
           <Typography variant="body1" noWrap>
             {displayName}
           </Typography>
-          <IconButton 
-            size="small" 
+          <IconButton
+            size="small"
             onClick={handleClear}
             sx={{ color: "white" }}
           >
@@ -85,9 +88,16 @@ const AudioDropzone: React.FC<AudioDropzoneProps> = ({ onFileAccepted, fileName 
           </IconButton>
         </>
       ) : (
-        <Typography variant="body1" display="flex" alignItems="center" gap={0.5}>
+        <Typography
+          variant="body1"
+          display="flex"
+          alignItems="center"
+          gap={0.5}
+        >
           <MusicNoteIcon fontSize="small" />
-          {isDragActive ? "Drop audio here..." : "Upload or drop audio file here"}
+          {isDragActive
+            ? "Drop audio here..."
+            : "Upload or drop audio file here"}
         </Typography>
       )}
     </Button>

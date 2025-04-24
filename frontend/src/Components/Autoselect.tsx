@@ -1,19 +1,20 @@
-import { useState } from 'react';
-import { TextField, Chip, Autocomplete, Box } from '@mui/material';
+import { useState } from "react";
+import { TextField, Chip, Autocomplete, Box } from "@mui/material";
 
-const tags = ['meeting', 'interview', 'podcast'];
+const tags = ["meeting", "interview", "podcast"];
 
 export default function TagSelector() {
   const [selectedTags, setSelectedTags] = useState(tags);
 
   return (
-    <Box sx={{ 
-        width: '100%',
-        backgroundColor: '#003b54',
+    <Box
+      sx={{
+        width: "100%",
+        backgroundColor: "#003b54",
         padding: 2,
         borderRadius: 2,
       }}
-      >
+    >
       <Autocomplete
         multiple
         id="tags-filled"
@@ -39,10 +40,10 @@ export default function TagSelector() {
             variant="filled"
             placeholder="Enter your tags"
             sx={{
-                backgroundColor: '#fff',
-                borderRadius: 2,
-                fontFamily: 'inherit'
-              }}
+              backgroundColor: "#fff",
+              borderRadius: 2,
+              fontFamily: "inherit",
+            }}
           />
         )}
       />

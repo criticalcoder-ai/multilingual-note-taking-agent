@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import ReactMarkdown from 'react-markdown';
-import { Box, Typography } from '@mui/material';
+import React, { useState, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
+import { Box, Typography } from "@mui/material";
 
 interface MarkdownTextProps {
   transcription: string | null;
@@ -8,18 +8,22 @@ interface MarkdownTextProps {
   audioFileName: string | null;
 }
 
-const MarkdownText: React.FC<MarkdownTextProps> = ({ transcription, language, audioFileName }) => {
+const MarkdownText: React.FC<MarkdownTextProps> = ({
+  transcription,
+  language,
+  audioFileName,
+}) => {
   const [snapshot, setSnapshot] = useState({
-    transcription: '',
-    language: '',
-    audioFileName: '',
+    transcription: "",
+    language: "",
+    audioFileName: "",
   });
 
   useEffect(() => {
     setSnapshot({
-      transcription: transcription || '_No transcription available yet._',
-      language: language || 'N/A',
-      audioFileName: audioFileName || 'N/A',
+      transcription: transcription || "_No transcription available yet._",
+      language: language || "N/A",
+      audioFileName: audioFileName || "N/A",
     });
   }, [transcription, language, audioFileName]);
 
@@ -37,15 +41,15 @@ ${snapshot.transcription}
   return (
     <Box
       sx={{
-        backgroundColor: '#1e1e1e',
-        color: 'white',
+        backgroundColor: "#1e1e1e",
+        color: "white",
         padding: 2,
-        borderRadius: '8px',
-        whiteSpace: 'pre-wrap',
-        wordBreak: 'break-word',
-        overflowWrap: 'anywhere',
-        overflowX: 'hidden',
-        maxWidth: '100%',
+        borderRadius: "8px",
+        whiteSpace: "pre-wrap",
+        wordBreak: "break-word",
+        overflowWrap: "anywhere",
+        overflowX: "hidden",
+        maxWidth: "100%",
       }}
     >
       <ReactMarkdown
@@ -55,7 +59,7 @@ ${snapshot.transcription}
               variant="h5"
               fontWeight="bold"
               gutterBottom
-              sx={{ color: 'white' }}
+              sx={{ color: "white" }}
               {...props}
             />
           ),
@@ -73,21 +77,21 @@ ${snapshot.transcription}
             <Typography
               variant="body1"
               component="li"
-              sx={{ fontWeight: 400, color: 'white', mb: 0.5 }}
+              sx={{ fontWeight: 400, color: "white", mb: 0.5 }}
               {...props}
             />
           ),
           strong: (props) => (
             <Typography
               component="span"
-              sx={{ fontWeight: 'bold', display: 'inline', color: 'white' }}
+              sx={{ fontWeight: "bold", display: "inline", color: "white" }}
               {...props}
             />
           ),
           p: (props) => (
             <Typography
               variant="body2"
-              sx={{ fontWeight: 300, color: 'white', marginBottom: 1 }}
+              sx={{ fontWeight: 300, color: "white", marginBottom: 1 }}
               {...props}
             />
           ),
