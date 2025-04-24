@@ -127,6 +127,7 @@ const transcribedTexts = {
 };
 
 export default function PersistentDrawerLeft() {
+  const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
   const theme = useTheme();
   const navigate = useNavigate();
   const { chatId } = useParams({ strict: false }) || { chatId: "1" };
@@ -140,7 +141,7 @@ export default function PersistentDrawerLeft() {
 
   const [sendState, setSendState] = useState(true);
 
-  // API Endpoint:
+  // API Endpoints:
   const {
     data: sessions = [],
     isLoading,
@@ -151,7 +152,7 @@ export default function PersistentDrawerLeft() {
     queryFn: async () => {
       try {
         const res = await axios.get(
-          "http://localhost:5000/api/audio-sessions/",
+          `${API_URL}/api/audio-sessions/`,
         );
 
         if (!Array.isArray(res.data)) {
@@ -171,7 +172,7 @@ export default function PersistentDrawerLeft() {
   const newSession = async () => {
     try {
       const res = await axios.get(
-        "http://localhost:5000/api/audio-sessions/new",
+        `${API_URL}/api/audio-sessions/new`,
       );
       const newSessionId = res.data;
       console.log("New session created with ID:", newSessionId);

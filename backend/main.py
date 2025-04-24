@@ -7,6 +7,7 @@ import shutil
 import os
 import datetime
 from typing import Optional
+from dotenv import load_dotenv
 from multiprocessing import Process, Queue
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -21,9 +22,16 @@ from sqlalchemy.orm import joinedload
 
 app = FastAPI()
 
+load_dotenv(dotenv_path="./.env")
+
+allowed_origins = [
+    os.getenv("CORS_ALLOW_ORIGIN"),
+    "http://localhost:5173"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
