@@ -1,5 +1,10 @@
 import { styled, useTheme } from "@mui/material/styles";
+import { useState, useEffect } from "react";
+import Tabs from "@mui/material/Tabs";
+import Tab from "@mui/material/Tab";
 import Box from "@mui/material/Box";
+import ReplayIcon from '@mui/icons-material/Replay';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import Drawer from "@mui/material/Drawer";
 import CssBaseline from "@mui/material/CssBaseline";
 import MuiAppBar, { AppBarProps as MuiAppBarProps } from "@mui/material/AppBar";
@@ -15,10 +20,34 @@ import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
+import AddCommentIcon from '@mui/icons-material/AddComment';
+import Button from "@mui/material/Button";
+import SendIcon from '@mui/icons-material/Send';
 import MailIcon from "@mui/icons-material/Mail";
+import ExportPdfButton from "./ExportPDF";
+import TextField from '@mui/material/TextField';
+import InputAdornment from '@mui/material/InputAdornment';
+import SearchIcon from '@mui/icons-material/Search';
+import { useNavigate, useParams } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+
+import { copyToClipboard } from "../utils";
 import LanguageDropdown from "./Dropdown";
 import AudioDropzone from "./AudioDropzone";
-import { useState } from "react";
+import Autoselect from "./Autoselect";
+import MarkdownText from "./MarkdownText";
+
+interface Session {
+  id: number;
+  session_name: string;
+  query_lang: string;
+  query_prompt: string;
+  created_time: string;
+  query_file: string;
+  query_audio_kind: string;
+}
+
 
 const drawerWidth = 250;
 
@@ -84,19 +113,99 @@ const languageOptions = [
   { label: "English (Default)", value: "english" },
   { label: "Mandarin (Traditional)", value: "mandarin" },
   { label: "Simplified Chinese", value: "simplified_chinese" },
+  { label: "French", value: "french" },
+  { label: "Spanish", value: "spanish" },
+  { label: "Portuguese", value: "portuguese" },
+  { label: "Japanese", value: "japanese" },
+  { label: "German", value: "german" },
 ];
+
+const transcribedTexts = {
+  notes: "Lorem ipsum dolor sit amet consectetur adipisicing elit. Perferendis sint reprehenderit voluptatibus blanditiis ex quibusdam autem laborum facere corrupti cum ea, adipisci ducimus molestias. Maiores molestias eius nulla odit minus?",
+  transcription: "Not a Lorem ipsum dolor sit amet consectetur adipisicing elit. Perferendis sint reprehenderit voluptatibus blanditiis ex quibusdam autem laborum facere corrupti cum ea, adipisci ducimus molestias. Maiores molestias eius nulla odit minus?",
+}
 
 export default function PersistentDrawerLeft() {
   const theme = useTheme();
-  const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+  const { chatId } = useParams({ strict: false }) || { chatId: '1'};
 
-  const handleDrawerOpen = () => {
-    setOpen(true);
+  const [open, setOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState(0);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedLanguage, setSelectedLanguage] = useState<string>("english");
+  const [prompt, setPrompt] = useState<string>("");
+  const [audioFileName, setAudioFileName] = useState<string>("");
+
+  const [sendState, setSendState] = useState(true);
+
+  // API Endpoint: 
+  const { data: sessions = [], isLoading, isError, error } = useQuery({
+    queryKey: ['audio-sessions'],
+    queryFn: async () => {
+      try {
+        const res = await axios.get('http://localhost:5000/api/audio-sessions/');
+        
+        if (!Array.isArray(res.data)) {
+          throw new Error('Invalid response format: expected array');
+        }
+        
+        return res.data;
+      } catch (err) {
+        if (axios.isAxiosError(err)) {
+          throw new Error(err.response?.data?.message || err.message);
+        }
+        throw err;
+      }
+    }
+  });
+
+  const newSession = async () => {
+    try {
+      const res = await axios.get('http://localhost:5000/api/audio-sessions/new');
+      const newSessionId = res.data;
+      console.log("New session created with ID:", newSessionId);
+  
+      // Navigate to new chat page with that session ID
+      navigate({ to: `/chat/${newSessionId}` });
+    } catch (error) {
+      console.error("Error creating new session: ", error);
+    }
+    
+  }
+
+
+  useEffect(() => {
+    if (sessions.length > 0 && chatId) {
+      const session = sessions.find((s: Session) => s.session_name === chatId);
+      if (session) {
+        setSelectedLanguage(session.query_lang.toLowerCase());
+        setPrompt(session.query_prompt);
+        setAudioFileName(session.query_file);
+      }
+    }
+  }, [sessions, chatId]);
+
+  const filteredChats = sessions.filter((session: Session) =>
+    session.session_name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleCopy = async () => {
+    const textToCopy = activeTab === 0 ? transcribedTexts.notes : transcribedTexts.transcription;
+    const success = await copyToClipboard(textToCopy);
+    console.log(success ? "Text copied to clipboard!" : "Failed to copy text.");
   };
 
-  const handleDrawerClose = () => {
-    setOpen(false);
-  };
+  const handleDrawerOpen = () => setOpen(true);
+  const handleDrawerClose = () => setOpen(false);
+
+  if (isLoading) {
+    return <Typography>Loading sessions...</Typography>;
+  }
+  
+  if (isError) {
+    return <Typography>Error fetching sessions. {error?.message}</Typography>;
+  }
 
   return (
     <Box
@@ -126,6 +235,7 @@ export default function PersistentDrawerLeft() {
           </Typography>
         </Toolbar>
       </AppBar>
+
       <Drawer
         sx={{
           width: drawerWidth,
@@ -133,6 +243,8 @@ export default function PersistentDrawerLeft() {
           "& .MuiDrawer-paper": {
             width: drawerWidth,
             boxSizing: "border-box",
+            display: "flex",
+            flexDirection: "column",
           },
         }}
         variant="persistent"
@@ -148,44 +260,105 @@ export default function PersistentDrawerLeft() {
             ...theme.mixins.toolbar,
           }}
         >
-          {theme.direction === "ltr" && (
-            <Typography variant="h6" gutterBottom align="left" marginLeft={1.5}>
-              {" "}
-              History{" "}
-            </Typography>
-          )}
+          
+          <Typography variant="h6" marginLeft={1.5}>
+            History
+          </Typography>
+          
           <IconButton onClick={handleDrawerClose}>
-            {theme.direction === "ltr" ? (
-              <ChevronLeftIcon />
-            ) : (
-              <ChevronRightIcon />
-            )}
+            {theme.direction === "ltr" ? <ChevronLeftIcon /> : <ChevronRightIcon />}
           </IconButton>
         </DrawerHeader>
-        <Divider />
-        <List>
-          {[
-            "Chat 1",
-            "Chat 2",
-            "Chat 3",
-            "Chat 4",
-            "Chat 5",
-            "Chat 6",
-            "Chat 7",
-          ].map((text) => (
-            <ListItem key={text} disablePadding>
-              <ListItemButton>
+
+      <Divider />
+
+      <Box sx={{ padding: 1 }}>
+        <TextField
+          fullWidth
+          variant="outlined"
+          size="small"
+          placeholder="Search chats..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+          sx={{
+            backgroundColor: "white",
+            borderRadius: 1,
+          }}
+        />
+      </Box>
+
+      <List
+        sx={{
+          flex: 1,
+          overflowY: "auto",
+        }}
+      >
+        {filteredChats.length > 0 ? (
+          filteredChats.map((session: Session) => (
+            <ListItem key={session.id} disablePadding>
+              <ListItemButton onClick={() => navigate({ to: `/chat/${session.session_name}` })}>
                 <ListItemIcon>
                   <MailIcon />
                 </ListItemIcon>
-                <ListItemText primary={text} />
+                <ListItemText primary={session.session_name} />
               </ListItemButton>
             </ListItem>
-          ))}
-        </List>
-      </Drawer>
+          ))
+        ) : (
+          <ListItem>
+            <ListItemText primary="No results found." />
+          </ListItem>
+        )}
+      </List>
+
+      <Button 
+        variant="outlined"
+        startIcon={<AddCommentIcon />}
+        sx={{
+          alignSelf: "center",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          border: "1px solid black",
+          borderRadius: "8px",
+          paddingX: 4,
+          paddingY: 1,
+          margin: 2,
+          cursor: "pointer",
+          color: "black",
+          "&:hover": {
+            backgroundColor: "black",
+            color: "white",
+          },
+        }}
+        onClick={() => {
+          newSession();
+
+        }}
+      >
+        New Chat
+      </Button>
+    </Drawer>
+
       <Main open={open} sx={{ height: "100%" }}>
         <DrawerHeader />
+        <Typography 
+          sx={{ 
+            color: 'black', 
+            mb: 2 
+          }}
+          fontSize="1.5rem"
+          fontWeight="bold"
+        >
+          {chatId}
+        </Typography>
         <Box
           sx={{
             display: "flex",
@@ -202,12 +375,18 @@ export default function PersistentDrawerLeft() {
             sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}
           >
             <Box sx={{ flex: 1 }}>
-              <AudioDropzone
-                onFileAccepted={(file) => {
+            <AudioDropzone
+              fileName={audioFileName}
+              onFileAccepted={(file) => {
+                if (file) {
+                  setAudioFileName(file.name);
                   console.log("Accepted file:", file);
-                  // TODO: File will be handled here
-                }}
-              />
+                } else {
+                  setAudioFileName("");
+                  console.log("File removed");
+                }
+              }}
+            />
             </Box>
 
             <Box
@@ -226,40 +405,18 @@ export default function PersistentDrawerLeft() {
             >
               <LanguageDropdown
                 options={languageOptions}
-                defaultValue="english"
-                onChange={(val) => console.log("Selected language:", val)}
+                value={selectedLanguage}
+                onChange={(val) => setSelectedLanguage(val)}
               />
             </Box>
           </Box>
 
-          <Box
-            sx={{
-              display: "flex",
-              gap: 1,
-              flexWrap: "wrap",
-              border: "1px solid white",
-              borderRadius: "8px",
-              padding: 1,
-            }}
-          >
-            {["meeting", "interview", "podcast"].map((tag) => (
-              <Box
-                key={tag}
-                sx={{
-                  border: "1px solid white",
-                  borderRadius: "8px",
-                  px: 2,
-                  py: 0.5,
-                  display: "inline-block",
-                }}
-              >
-                {tag} ×
-              </Box>
-            ))}
-          </Box>
+          <Autoselect />
 
           <Box
             component="textarea"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
             placeholder="Enter your prompt here:"
             rows={4}
             sx={{
@@ -273,21 +430,29 @@ export default function PersistentDrawerLeft() {
             }}
           />
 
-          <Box
+          <Button 
+            variant="outlined"
             sx={{
               alignSelf: "center",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               border: "1px solid white",
               borderRadius: "8px",
               paddingX: 4,
               paddingY: 1,
               cursor: "pointer",
+              color: "white",
               "&:hover": {
                 backgroundColor: "green",
               },
             }}
+
+            onClick={() => {setSendState(false)}}
           >
-            Send / Retry
-          </Box>
+            {sendState ? (<SendIcon sx={{ marginRight: 1 }} />) : (<ReplayIcon sx={{ marginRight: 1 }} />)}
+            {sendState ? ("Send") : ("Retry")}
+          </Button>
         </Box>
 
         <Box
@@ -310,9 +475,59 @@ export default function PersistentDrawerLeft() {
               fontSize: "0.85rem",
             }}
           >
-            <Typography variant="h5" gutterBottom align="left">
-              Transcribed text
-            </Typography>
+
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderBottom: 1,
+                borderColor: 'divider',
+              }}
+            >
+              <Tabs
+                value={activeTab}
+                onChange={(_, newValue) => setActiveTab(newValue)}
+                textColor="inherit"
+                indicatorColor="primary"
+                aria-label="transcription and notes tabs"
+                sx={{
+                  borderBottom: 1,
+                  borderColor: 'divider',
+                }}
+              >
+                <Tab label="Transcription" />
+                <Tab label="Notes" />
+              </Tabs>
+              <IconButton onClick={handleCopy} aria-label="copy" sx={{ color: (theme) => theme.palette.common.white }}>
+                <ContentCopyIcon />
+              </IconButton>
+            </Box>
+
+            <Box
+              sx={{
+                position: 'relative',
+                paddingX: 1,
+                paddingY: 2,
+                height: 300,
+                overflowY: 'auto',
+              }}
+            >
+              {activeTab === 0 && (
+                <MarkdownText
+                  transcription={transcribedTexts.transcription}
+                  language={selectedLanguage}
+                  audioFileName={audioFileName}
+                />
+              )}
+              {activeTab === 1 && (
+                <MarkdownText
+                transcription={transcribedTexts.notes}
+                language={selectedLanguage}
+                audioFileName={audioFileName}
+              />)}
+            </Box>
+
 
             <Box
               sx={{
@@ -323,85 +538,12 @@ export default function PersistentDrawerLeft() {
                 marginTop: 2,
               }}
             >
-              <Box sx={{ display: "flex" }}>
-                <Box
-                  sx={{
-                    border: "1px solid white",
-                    borderRadius: "6px",
-                    paddingX: 1.5,
-                    paddingY: 0.3,
-                    marginRight: 2,
-                    fontSize: "0.85rem",
-                    cursor: "pointer",
-                    "&:hover": {
-                      backgroundColor: "white",
-                      color: "#1e1e1e",
-                    },
-                  }}
-                >
-                  Transcription
-                </Box>
-
-                <Box
-                  sx={{
-                    border: "1px solid white",
-                    borderRadius: "6px",
-                    paddingX: 1.5,
-                    paddingY: 0.3,
-                    fontSize: "0.85rem",
-                    cursor: "pointer",
-                    "&:hover": {
-                      backgroundColor: "white",
-                      color: "#1e1e1e",
-                    },
-                  }}
-                >
-                  Notes
-                </Box>
-              </Box>
-
-              <Box
-                sx={{
-                  border: "1px solid white",
-                  borderRadius: "6px",
-                  paddingX: 1.5,
-                  paddingY: 0.3,
-                  fontSize: "0.85rem",
-                  cursor: "pointer",
-                  "&:hover": {
-                    backgroundColor: "white",
-                    color: "#1e1e1e",
-                  },
-                }}
-              >
-                Copy
-              </Box>
+         
+              <ExportPdfButton
+                contentToExport={activeTab === 0 ? transcribedTexts.notes : transcribedTexts.transcription} 
+              />
+              
             </Box>
-          </Box>
-          <Divider sx={{ backgroundColor: "white", marginY: 2, marginX: 2 }} />
-          <Box
-            sx={{
-              position: "relative",
-              paddingX: 3,
-              height: 300,
-              overflowY: "auto",
-            }}
-          >
-            <Typography>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-              eiusmod tempor incididunt ut labore et dolore magna aliqua.
-              Rhoncus dolor purus non enim praesent elementum facilisis leo vel.
-              Risus at ultrices mi tempus imperdiet. Semper risus in hendrerit
-              gravida rutrum quisque non tellus. Convallis convallis tellus id
-              interdum velit laoreet id donec ultrices. Odio morbi quis commodo
-              odio aenean sed adipiscing. Amet nisl suscipit adipiscing bibendum
-              est ultricies integer quis. Cursus euismod quis viverra nibh cras.
-              Metus vulputate eu scelerisque felis imperdiet proin fermentum
-              leo. Mauris commodo quis imperdiet massa tincidunt. Cras tincidunt
-              lobortis feugiat vivamus at augue. At augue eget arcu dictum
-              varius duis at consectetur lorem. Velit sed ullamcorper morbi
-              tincidunt. Lorem donec massa sapien faucibus et molestie ac.
-            </Typography>
           </Box>
         </Box>
       </Main>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   FormControl,
   InputLabel,
@@ -14,21 +14,18 @@ type LanguageOption = {
 
 interface LanguageDropdownProps {
   options: LanguageOption[];
-  defaultValue?: string;
-  onChange?: (selectedValue: string) => void;
+  value: string;
+  onChange: (selectedValue: string) => void;
 }
 
 const LanguageDropdown: React.FC<LanguageDropdownProps> = ({
   options,
-  defaultValue = "auto",
+  value,
   onChange,
 }) => {
-  const [selected, setSelected] = useState(defaultValue);
-
   const handleChange = (event: SelectChangeEvent) => {
-    const value = event.target.value;
-    setSelected(value);
-    if (onChange) onChange(value);
+    const selectedValue = event.target.value;
+    onChange(selectedValue);
   };
 
   return (
@@ -54,7 +51,7 @@ const LanguageDropdown: React.FC<LanguageDropdownProps> = ({
       </InputLabel>
       <Select
         labelId="language-select-label"
-        value={selected}
+        value={value}
         label="Language"
         onChange={handleChange}
         sx={{

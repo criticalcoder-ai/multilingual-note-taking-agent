@@ -1,32 +1,25 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
-import { Box, Typography, IconButton } from "@mui/material";
+import { Typography, IconButton } from "@mui/material";
+import Button from "@mui/material/Button";
+import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import DeleteIcon from "@mui/icons-material/Delete";
 
 interface AudioDropzoneProps {
   onFileAccepted: (file: File | null) => void;
+  fileName?: string | null;
 }
 
-const AudioDropzone: React.FC<AudioDropzoneProps> = ({ onFileAccepted }) => {
-  const [fileName, setFileName] = useState<string | null>(null);
-
+const AudioDropzone: React.FC<AudioDropzoneProps> = ({ onFileAccepted, fileName }) => {
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       if (acceptedFiles.length > 0) {
         const file = acceptedFiles[0];
-        const trimmedName =
-          file.name.length > 15 ? `${file.name.slice(0, 15)}...` : file.name;
-        setFileName(trimmedName);
-        onFileAccepted(file);
+        onFileAccepted(file);  // Notify parent with new file
       }
     },
-    [onFileAccepted],
+    [onFileAccepted]
   );
-
-  const handleClear = () => {
-    setFileName(null);
-    onFileAccepted(null);
-  };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -36,14 +29,28 @@ const AudioDropzone: React.FC<AudioDropzoneProps> = ({ onFileAccepted }) => {
     multiple: false,
   });
 
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onFileAccepted(null);  // Reset in parent
+  };
+
+  const displayName = fileName
+    ? fileName.length > 15
+      ? `${fileName.slice(0, 15)}...`
+      : fileName
+    : null;
+
   return (
-    <Box
+    <Button
+      variant="contained"
       {...getRootProps()}
       sx={{
         flex: 1,
+        width: '100%',
         border: "1px dashed white",
         borderRadius: "8px",
         textAlign: "center",
+        textTransform: 'none',
         py: 2,
         px: 3,
         cursor: "pointer",
@@ -51,8 +58,8 @@ const AudioDropzone: React.FC<AudioDropzoneProps> = ({ onFileAccepted }) => {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        gap: 1,
-        transition: "0.2s",
+        gap: 0.5,
+        transition: "0.5s",
         "&:hover": {
           backgroundColor: "green",
           color: "white",
@@ -64,13 +71,13 @@ const AudioDropzone: React.FC<AudioDropzoneProps> = ({ onFileAccepted }) => {
       }}
     >
       <input {...getInputProps()} />
-      {fileName ? (
+      {displayName ? (
         <>
           <Typography variant="body1" noWrap>
-            {fileName}
+            {displayName}
           </Typography>
-          <IconButton
-            size="small"
+          <IconButton 
+            size="small" 
             onClick={handleClear}
             sx={{ color: "white" }}
           >
@@ -78,13 +85,12 @@ const AudioDropzone: React.FC<AudioDropzoneProps> = ({ onFileAccepted }) => {
           </IconButton>
         </>
       ) : (
-        <Typography variant="body1">
-          {isDragActive
-            ? "Drop the audio here..."
-            : "Upload or drop audio file here"}
+        <Typography variant="body1" display="flex" alignItems="center" gap={0.5}>
+          <MusicNoteIcon fontSize="small" />
+          {isDragActive ? "Drop audio here..." : "Upload or drop audio file here"}
         </Typography>
       )}
-    </Box>
+    </Button>
   );
 };
 
