@@ -133,7 +133,6 @@ const modelOptions = [
 ];
 
 export default function PersistentDrawerLeft() {
-  const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
   const theme = useTheme();
   const navigate = useNavigate();
 
