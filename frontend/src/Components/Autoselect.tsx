@@ -7,7 +7,10 @@ interface TagSelectorProps {
 
 const tags = ["meeting", "interview", "podcast"];
 
-export default function TagSelector({ selectedTags, setSelectedTags }: TagSelectorProps) {
+export default function TagSelector({
+  selectedTags,
+  setSelectedTags,
+}: TagSelectorProps) {
   return (
     <Autocomplete
       multiple

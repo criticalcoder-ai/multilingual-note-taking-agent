@@ -29,12 +29,13 @@ import InputAdornment from "@mui/material/InputAdornment";
 import SearchIcon from "@mui/icons-material/Search";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Tabs, Tab, Box } from '@mui/material';
+import { Tabs, Tab, Box } from "@mui/material";
 import axios from "axios";
 
 import { copyToClipboard } from "../utils";
 import LanguageDropdown from "./Dropdown";
-import ModelDropdown from './Dropdown'
+import NotesModelDropdown from "./Dropdown";
+import AudioModelDropdown from "./Dropdown";
 import AudioDropzone from "./AudioDropzone";
 import Autoselect from "./Autoselect";
 import MarkdownText from "./MarkdownText";
@@ -125,15 +126,23 @@ const languageOptions = [
   { label: "German", value: "german" },
 ];
 
-const modelOptions = [
-  { label: "Deepseek (Default", value: "deepseek" },
-  { label: "Open AI", value: "openai" },
-  { label: "Qwen", value: "qwen" },
-  { label: "Gemini", value: "gemini" },
+const notesModelOptions = [
+  { label: "Deepseek (Default)", value: "deepseek_openrouter_api" },
+  { label: "Llama CPP", value: "llama_cpp_local" },
+  { label: "Qwen openrouter", value: "qwen_openrouter_api" },
+  { label: "Gemini openrouter", value: "gemini_openrouter_api" },
+  { label: "Dummy", value: "dummy" },
+];
+
+const audioModelOptions = [
+  { label: "Whisper (Default)", value: "whisper" },
+  { label: "Alibaba ASR", value: "alibaba_asr_api" },
+  { label: "Dummy", value: "dummy" },
 ];
 
 export default function PersistentDrawerLeft() {
-  const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+  // const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+  const API_URL = "http://localhost:5000";
   const theme = useTheme();
   const navigate = useNavigate();
 
@@ -145,14 +154,20 @@ export default function PersistentDrawerLeft() {
   const [activeTab, setActiveTab] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState<string>("english");
-  const [selectedModel, setSelectedModel] = useState<string>("openai");
+  const [selectedNotesModel, setSelectedNotesModel] = useState<string>(
+    "deepseek_openrouter_api",
+  );
+  const [selectedAudioModel, setSelectedAudioModel] =
+    useState<string>("whisper");
   const [prompt, setPrompt] = useState<string>("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioFileName, setAudioFileName] = useState<string>("");
   const [sendState, setSendState] = useState(true);
-  const [transcriptionData, setTranscriptionData] = useState<TranscriptionResponse | null>(null);
+  const [transcriptionData, setTranscriptionData] =
+    useState<TranscriptionResponse | null>(null);
   const [isLoadingResponse, setIsLoadingResponse] = useState(false);
+  const isNewChat = sessionId === "new";
 
   // API Endpoints:
   const {
@@ -164,9 +179,7 @@ export default function PersistentDrawerLeft() {
     queryKey: ["audio-sessions"],
     queryFn: async () => {
       try {
-        const res = await axios.get(
-          `${API_URL}/api/audio-sessions/`,
-        );
+        const res = await axios.get(`${API_URL}/api/audio-sessions/`);
 
         if (!Array.isArray(res.data)) {
           throw new Error("Invalid response format: expected array");
@@ -182,40 +195,41 @@ export default function PersistentDrawerLeft() {
     },
   });
 
-  const newSession = async () => {
-    try {
-      const res = await axios.get(
-        `${API_URL}/api/audio-sessions/new`,
-      );
-      const newSessionId = res.data;
-      console.log("New session created with ID:", newSessionId);
-
-      // Navigate to new chat page with that session ID
-      navigate({ to: `/chat/${newSessionId}` });
-    } catch (error) {
-      console.error("Error creating new session: ", error);
-    }
-  };
-
   useEffect(() => {
+    if (isNewChat) {
+      setSessionName("New Session");
+      setSelectedLanguage("english");
+      setPrompt("");
+      setAudioFile(null);
+      setSelectedNotesModel("deepseek_openrouter_api");
+      setSelectedAudioModel("whisper");
+      setAudioFileName("");
+      setSelectedTags([]);
+      setTranscriptionData(null);
+      setSendState(true);
+      return;
+    }
+
     if (sessions.length > 0 && sessionId) {
-      const session = sessions.find((s: Session) => s.id.toString() === sessionId);
+      const session = sessions.find(
+        (s: Session) => s.id.toString() === sessionId,
+      );
       if (session) {
         setSessionName(session.session_name);
         setSelectedLanguage(session.query_lang.toLowerCase());
         setPrompt(session.query_prompt);
         setAudioFileName(session.query_file);
-        
+
         // If this session already has data, show the transcription/notes tabs
         if (session.transcription || session.notes) {
           setTranscriptionData({
             transcription: session.transcription || "",
-            notes: session.notes || ""
+            notes: session.notes || "",
           });
         }
       }
     }
-  }, [sessions, sessionId]);
+  }, [sessions, sessionId, isNewChat]);
 
   const filteredChats = sessions.filter((session: Session) =>
     session.session_name.toLowerCase().includes(searchTerm.toLowerCase()),
@@ -223,9 +237,11 @@ export default function PersistentDrawerLeft() {
 
   const handleCopy = async () => {
     if (!transcriptionData) return;
-    
+
     const textToCopy =
-      activeTab === 0 ? transcriptionData.transcription : transcriptionData.notes;
+      activeTab === 0
+        ? transcriptionData.transcription
+        : transcriptionData.notes;
     const success = await copyToClipboard(textToCopy);
     console.log(success ? "Text copied to clipboard!" : "Failed to copy text.");
   };
@@ -233,25 +249,55 @@ export default function PersistentDrawerLeft() {
   const handleSendRequest = async () => {
     const tagsString = selectedTags.join(", ");
 
-    if(!audioFile) {
+    if (!audioFile) {
       window.alert("Please upload an audio file!");
       return;
     }
 
+    setIsLoadingResponse(true);
+    let currentSessionId = sessionId;
+
+    if (isNewChat) {
+      try {
+        const createRes = await axios.get(`${API_URL}/api/audio-sessions/new`);
+        currentSessionId = createRes.data;
+        console.log("New session created with ID:", currentSessionId);
+      } catch (error) {
+        console.error("Error creating new session: ", error);
+        window.alert("Error creating new session!");
+        return;
+      }
+    }
+
     const formData = new FormData();
-    formData.append("session_id", sessionId);
+    formData.append("session_id", currentSessionId);
     formData.append("session_name", sessionName);
     formData.append("file", audioFile);
     formData.append("query_prompt", prompt);
     formData.append("query_lang", selectedLanguage);
-    formData.append("query_file", audioFileName);
     formData.append("query_audio_kind", tagsString);
+
+    window.alert(`
+      Session ID: ${currentSessionId}
+      Session Name: ${sessionName}
+      File: ${audioFileName}
+      Prompt: ${prompt}
+      Language: ${selectedLanguage}
+      Tags: ${tagsString}
+      Audio Model: ${selectedAudioModel}
+      Notes Model: ${selectedNotesModel}`);
 
     console.log("Sending payload:", formData);
 
-    setIsLoadingResponse(true);
+    const url = new URL(`${API_URL}/api/transcribe-and-generate-notes/`);
+    // url.searchParams.append("session_id", currentSessionId);
+    // url.searchParams.append("session_name", sessionName);
+    // url.searchParams.append("query_lang", selectedLanguage);
+    // url.searchParams.append("query_prompt", prompt);
+    // url.searchParams.append("query_audio_kind", tagsString);
+
     try {
-      const res = await axios.post(`${API_URL}/api/audio-sessions/send`, formData, {
+      const res = await axios.post(url.toString(), formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -261,20 +307,21 @@ export default function PersistentDrawerLeft() {
         console.log("Request successful:", res.data);
         setTranscriptionData({
           transcription: res.data.transcription || "",
-          notes: res.data.notes || ""
+          notes: res.data.notes || "",
         });
         setSendState(false);
       } else {
         console.error("Unexpected response:", res);
+        window.alert("Unexpected error occurred!");
       }
     } catch (error) {
       console.error("Error sending request:", error);
-      window.alert("Error sending request!");
+      window.alert("Error sending request: ");
     } finally {
       setIsLoadingResponse(false);
     }
-  }
-  
+  };
+
   const handleDrawerOpen = () => setOpen(true);
   const handleDrawerClose = () => setOpen(false);
 
@@ -313,13 +360,32 @@ export default function PersistentDrawerLeft() {
             Voice AI - Transcribe
           </Typography>
           <Box sx={{ flexGrow: 1 }} />
-          <Box sx={{ minWidth: 150, ml: 'auto' }}>
-            <ModelDropdown
-              title="Model"
-              options={modelOptions}
-              value={selectedModel}
-              onChange={(val) => setSelectedModel(val)}
-            />
+          <Box sx={{ minWidth: 200, ml: "auto" }}>
+            <Box
+              sx={{
+                minWidth: 200,
+                ml: "auto",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <Box sx={{ mr: 2 }}>
+                <AudioModelDropdown
+                  title="Audio Model"
+                  options={audioModelOptions}
+                  value={selectedAudioModel}
+                  onChange={(val) => setSelectedAudioModel(val)}
+                />
+              </Box>
+              <Box>
+                <NotesModelDropdown
+                  title="Notes Model"
+                  options={notesModelOptions}
+                  value={selectedNotesModel}
+                  onChange={(val) => setSelectedNotesModel(val)}
+                />
+              </Box>
+            </Box>
           </Box>
         </Toolbar>
       </AppBar>
@@ -365,7 +431,7 @@ export default function PersistentDrawerLeft() {
               },
             }}
             onClick={() => {
-              newSession();
+              navigate({ to: `/chat/new` });
             }}
           >
             <AddCommentIcon />
@@ -414,9 +480,7 @@ export default function PersistentDrawerLeft() {
             filteredChats.map((session: Session) => (
               <ListItem key={session.id} disablePadding>
                 <ListItemButton
-                  onClick={() =>
-                    navigate({ to: `/chat/${session.id}` })
-                  }
+                  onClick={() => navigate({ to: `/chat/${session.id}` })}
                 >
                   <ListItemIcon>
                     <MailIcon />
@@ -475,9 +539,9 @@ export default function PersistentDrawerLeft() {
                 // Call an API to update session_name in backend here if needed
                 // e.g. axios.post(`${API_URL}/api/audio-sessions/${sessionId}/rename`, { session_name: sessionName })
               }
-              if((sessionName === "" || null) && isEditingName === true) {
-                  window.alert("Please enter a valid session name!");
-                  return;
+              if ((sessionName === "" || null) && isEditingName === true) {
+                window.alert("Please enter a valid session name!");
+                return;
               }
               setIsEditingName(!isEditingName);
             }}
@@ -489,7 +553,11 @@ export default function PersistentDrawerLeft() {
               padding: "4px",
             }}
           >
-            {isEditingName ? <CheckIcon fontSize="small" /> : <EditIcon fontSize="small" />}
+            {isEditingName ? (
+              <CheckIcon fontSize="small" />
+            ) : (
+              <EditIcon fontSize="small" />
+            )}
           </IconButton>
         </Box>
 
@@ -548,7 +616,10 @@ export default function PersistentDrawerLeft() {
             </Box>
           </Box>
 
-          <Autoselect selectedTags={selectedTags} setSelectedTags={setSelectedTags} />
+          <Autoselect
+            selectedTags={selectedTags}
+            setSelectedTags={setSelectedTags}
+          />
 
           <Box
             component="textarea"
@@ -607,7 +678,6 @@ export default function PersistentDrawerLeft() {
           </Button>
         </Box>
 
-        
         <Box
           sx={{
             marginTop: 4,
@@ -651,7 +721,7 @@ export default function PersistentDrawerLeft() {
                 <Tab label="Transcription" />
                 <Tab label="Notes" />
               </Tabs>
-              
+
               <IconButton
                 onClick={handleCopy}
                 aria-label="copy"
@@ -661,51 +731,53 @@ export default function PersistentDrawerLeft() {
               </IconButton>
             </Box>
 
-            {(transcriptionData) ? (<>
-              <Box
-              sx={{
-                position: "relative",
-                paddingX: 1,
-                paddingY: 2,
-                overflowY: "auto",
-              }}
-            >
-              {activeTab === 0 && (
-                <MarkdownText
-                  title="Transcription"
-                  transcription={transcriptionData.transcription}
-                  language={selectedLanguage}
-                  audioFileName={audioFileName}
-                />
-              )}
-              {activeTab === 1 && (
-                <MarkdownText
-                  title="Notes"
-                  transcription={transcriptionData.notes}
-                  language={selectedLanguage}
-                  audioFileName={audioFileName}
-                />
-              )}
-            </Box>
+            {transcriptionData ? (
+              <>
+                <Box
+                  sx={{
+                    position: "relative",
+                    paddingX: 1,
+                    paddingY: 2,
+                    overflowY: "auto",
+                  }}
+                >
+                  {activeTab === 0 && (
+                    <MarkdownText
+                      title="Transcription"
+                      transcription={transcriptionData.transcription}
+                      language={selectedLanguage}
+                      audioFileName={audioFileName}
+                    />
+                  )}
+                  {activeTab === 1 && (
+                    <MarkdownText
+                      title="Notes"
+                      transcription={transcriptionData.notes}
+                      language={selectedLanguage}
+                      audioFileName={audioFileName}
+                    />
+                  )}
+                </Box>
 
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                width: "100%",
-                marginTop: 2,
-              }}
-            >
-              <ExportPdfButton
-                contentToExport={
-                  activeTab === 0
-                    ? transcriptionData.transcription
-                    : transcriptionData.notes
-                }
-              />
-            </Box>
-            </>) : (
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    width: "100%",
+                    marginTop: 2,
+                  }}
+                >
+                  <ExportPdfButton
+                    contentToExport={
+                      activeTab === 0
+                        ? transcriptionData.transcription
+                        : transcriptionData.notes
+                    }
+                  />
+                </Box>
+              </>
+            ) : (
               <Typography
                 sx={{
                   padding: 2,
@@ -713,12 +785,13 @@ export default function PersistentDrawerLeft() {
                   fontStyle: "italic",
                 }}
               >
-                {(isLoadingResponse) ? "Loading..." : "No transcription or notes available."}
+                {isLoadingResponse
+                  ? "Loading..."
+                  : "No transcription or notes available."}
               </Typography>
             )}
           </Box>
         </Box>
-        
       </Main>
     </Box>
   );
