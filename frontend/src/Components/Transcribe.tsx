@@ -125,11 +125,17 @@ const languageOptions = [
   { label: "German", value: "german" },
 ];
 
-const modelOptions = [
-  { label: "Deepseek (Default", value: "deepseek" },
-  { label: "Open AI", value: "openai" },
-  { label: "Qwen", value: "qwen" },
-  { label: "Gemini", value: "gemini" },
+const transModelOptions = [
+  { label: "Alibaba ASR (Default)", value: "alibaba_asr_api" },
+  { label: "Whisper", value: "whisper" },
+  { label: "dummy", value: "dummy" },
+];
+
+const notesModelOptions = [
+  { label: "Qwen (Default)", value: "qwen_openrouter_api" },
+  { label: "Deepseek", value: "deepseek_openrouter_api" },
+  { label: "Gemini", value: "gemini_openrouter_api" },
+  { label: "dummy", value: "dummy" },
 ];
 
 export default function PersistentDrawerLeft() {
@@ -310,10 +316,18 @@ export default function PersistentDrawerLeft() {
             Voice AI - Transcribe
           </Typography>
           <Box sx={{ flexGrow: 1 }} />
+          <Box sx={{ minWidth: 150, ml: "auto", paddingRight: "1rem" }}>
+            <ModelDropdown
+              title="Transcription Model"
+              options={transModelOptions}
+              value={selectedModel}
+              onChange={(val) => setSelectedModel(val)}
+            />
+          </Box>
           <Box sx={{ minWidth: 150, ml: "auto" }}>
             <ModelDropdown
-              title="Model"
-              options={modelOptions}
+              title="Notes Model"
+              options={notesModelOptions}
               value={selectedModel}
               onChange={(val) => setSelectedModel(val)}
             />
