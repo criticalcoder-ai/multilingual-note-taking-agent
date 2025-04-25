@@ -30,7 +30,6 @@ import SearchIcon from "@mui/icons-material/Search";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, Tab, Box } from "@mui/material";
-import axios from "axios";
 
 import { copyToClipboard } from "../utils";
 import LanguageDropdown from "./Dropdown";
@@ -38,6 +37,7 @@ import ModelDropdown from "./Dropdown";
 import AudioDropzone from "./AudioDropzone";
 import Autoselect from "./Autoselect";
 import MarkdownText from "./MarkdownText";
+import { api } from "../api/api";
 
 interface Session {
   id: number;
@@ -165,7 +165,7 @@ export default function PersistentDrawerLeft() {
     queryKey: ["audio-sessions"],
     queryFn: async () => {
       try {
-        const res = await axios.get(`${API_URL}/api/audio-sessions/`);
+        const res = await api.get(`/api/audio-sessions/`);
 
         if (!Array.isArray(res.data)) {
           throw new Error("Invalid response format: expected array");
@@ -173,9 +173,6 @@ export default function PersistentDrawerLeft() {
 
         return res.data;
       } catch (err) {
-        if (axios.isAxiosError(err)) {
-          throw new Error(err.response?.data?.message || err.message);
-        }
         throw err;
       }
     },
@@ -183,7 +180,7 @@ export default function PersistentDrawerLeft() {
 
   const newSession = async () => {
     try {
-      const res = await axios.get(`${API_URL}/api/audio-sessions/new`);
+      const res = await api.get(`/api/audio-sessions/new`);
       const newSessionId = res.data;
       console.log("New session created with ID:", newSessionId);
 
@@ -252,15 +249,11 @@ export default function PersistentDrawerLeft() {
 
     setIsLoadingResponse(true);
     try {
-      const res = await axios.post(
-        `${API_URL}/api/audio-sessions/send`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+      const res = await api.post(`/api/audio-sessions/send`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
         },
-      );
+      });
 
       if (res.status === 200) {
         console.log("Request successful:", res.data);
@@ -476,7 +469,7 @@ export default function PersistentDrawerLeft() {
             onClick={() => {
               if (isEditingName) {
                 // Call an API to update session_name in backend here if needed
-                // e.g. axios.post(`${API_URL}/api/audio-sessions/${sessionId}/rename`, { session_name: sessionName })
+                // e.g. api.post(`${API_URL}/api/audio-sessions/${sessionId}/rename`, { session_name: sessionName })
               }
               if ((sessionName === "" || null) && isEditingName === true) {
                 window.alert("Please enter a valid session name!");
