@@ -29,12 +29,12 @@ import InputAdornment from "@mui/material/InputAdornment";
 import SearchIcon from "@mui/icons-material/Search";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Tabs, Tab, Box } from '@mui/material';
+import { Tabs, Tab, Box } from "@mui/material";
 import axios from "axios";
 
 import { copyToClipboard } from "../utils";
 import LanguageDropdown from "./Dropdown";
-import ModelDropdown from './Dropdown'
+import ModelDropdown from "./Dropdown";
 import AudioDropzone from "./AudioDropzone";
 import Autoselect from "./Autoselect";
 import MarkdownText from "./MarkdownText";
@@ -151,7 +151,8 @@ export default function PersistentDrawerLeft() {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioFileName, setAudioFileName] = useState<string>("");
   const [sendState, setSendState] = useState(true);
-  const [transcriptionData, setTranscriptionData] = useState<TranscriptionResponse | null>(null);
+  const [transcriptionData, setTranscriptionData] =
+    useState<TranscriptionResponse | null>(null);
   const [isLoadingResponse, setIsLoadingResponse] = useState(false);
 
   // API Endpoints:
@@ -164,9 +165,7 @@ export default function PersistentDrawerLeft() {
     queryKey: ["audio-sessions"],
     queryFn: async () => {
       try {
-        const res = await axios.get(
-          `${API_URL}/api/audio-sessions/`,
-        );
+        const res = await axios.get(`${API_URL}/api/audio-sessions/`);
 
         if (!Array.isArray(res.data)) {
           throw new Error("Invalid response format: expected array");
@@ -184,9 +183,7 @@ export default function PersistentDrawerLeft() {
 
   const newSession = async () => {
     try {
-      const res = await axios.get(
-        `${API_URL}/api/audio-sessions/new`,
-      );
+      const res = await axios.get(`${API_URL}/api/audio-sessions/new`);
       const newSessionId = res.data;
       console.log("New session created with ID:", newSessionId);
 
@@ -199,18 +196,20 @@ export default function PersistentDrawerLeft() {
 
   useEffect(() => {
     if (sessions.length > 0 && sessionId) {
-      const session = sessions.find((s: Session) => s.id.toString() === sessionId);
+      const session = sessions.find(
+        (s: Session) => s.id.toString() === sessionId,
+      );
       if (session) {
         setSessionName(session.session_name);
         setSelectedLanguage(session.query_lang.toLowerCase());
         setPrompt(session.query_prompt);
         setAudioFileName(session.query_file);
-        
+
         // If this session already has data, show the transcription/notes tabs
         if (session.transcription || session.notes) {
           setTranscriptionData({
             transcription: session.transcription || "",
-            notes: session.notes || ""
+            notes: session.notes || "",
           });
         }
       }
@@ -223,9 +222,11 @@ export default function PersistentDrawerLeft() {
 
   const handleCopy = async () => {
     if (!transcriptionData) return;
-    
+
     const textToCopy =
-      activeTab === 0 ? transcriptionData.transcription : transcriptionData.notes;
+      activeTab === 0
+        ? transcriptionData.transcription
+        : transcriptionData.notes;
     const success = await copyToClipboard(textToCopy);
     console.log(success ? "Text copied to clipboard!" : "Failed to copy text.");
   };
@@ -233,7 +234,7 @@ export default function PersistentDrawerLeft() {
   const handleSendRequest = async () => {
     const tagsString = selectedTags.join(", ");
 
-    if(!audioFile) {
+    if (!audioFile) {
       window.alert("Please upload an audio file!");
       return;
     }
@@ -251,17 +252,21 @@ export default function PersistentDrawerLeft() {
 
     setIsLoadingResponse(true);
     try {
-      const res = await axios.post(`${API_URL}/api/audio-sessions/send`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
+      const res = await axios.post(
+        `${API_URL}/api/audio-sessions/send`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         },
-      });
+      );
 
       if (res.status === 200) {
         console.log("Request successful:", res.data);
         setTranscriptionData({
           transcription: res.data.transcription || "",
-          notes: res.data.notes || ""
+          notes: res.data.notes || "",
         });
         setSendState(false);
       } else {
@@ -273,8 +278,8 @@ export default function PersistentDrawerLeft() {
     } finally {
       setIsLoadingResponse(false);
     }
-  }
-  
+  };
+
   const handleDrawerOpen = () => setOpen(true);
   const handleDrawerClose = () => setOpen(false);
 
@@ -313,7 +318,7 @@ export default function PersistentDrawerLeft() {
             Voice AI - Transcribe
           </Typography>
           <Box sx={{ flexGrow: 1 }} />
-          <Box sx={{ minWidth: 150, ml: 'auto' }}>
+          <Box sx={{ minWidth: 150, ml: "auto" }}>
             <ModelDropdown
               title="Model"
               options={modelOptions}
@@ -414,9 +419,7 @@ export default function PersistentDrawerLeft() {
             filteredChats.map((session: Session) => (
               <ListItem key={session.id} disablePadding>
                 <ListItemButton
-                  onClick={() =>
-                    navigate({ to: `/chat/${session.id}` })
-                  }
+                  onClick={() => navigate({ to: `/chat/${session.id}` })}
                 >
                   <ListItemIcon>
                     <MailIcon />
@@ -475,9 +478,9 @@ export default function PersistentDrawerLeft() {
                 // Call an API to update session_name in backend here if needed
                 // e.g. axios.post(`${API_URL}/api/audio-sessions/${sessionId}/rename`, { session_name: sessionName })
               }
-              if((sessionName === "" || null) && isEditingName === true) {
-                  window.alert("Please enter a valid session name!");
-                  return;
+              if ((sessionName === "" || null) && isEditingName === true) {
+                window.alert("Please enter a valid session name!");
+                return;
               }
               setIsEditingName(!isEditingName);
             }}
@@ -489,7 +492,11 @@ export default function PersistentDrawerLeft() {
               padding: "4px",
             }}
           >
-            {isEditingName ? <CheckIcon fontSize="small" /> : <EditIcon fontSize="small" />}
+            {isEditingName ? (
+              <CheckIcon fontSize="small" />
+            ) : (
+              <EditIcon fontSize="small" />
+            )}
           </IconButton>
         </Box>
 
@@ -548,7 +555,10 @@ export default function PersistentDrawerLeft() {
             </Box>
           </Box>
 
-          <Autoselect selectedTags={selectedTags} setSelectedTags={setSelectedTags} />
+          <Autoselect
+            selectedTags={selectedTags}
+            setSelectedTags={setSelectedTags}
+          />
 
           <Box
             component="textarea"
@@ -607,7 +617,6 @@ export default function PersistentDrawerLeft() {
           </Button>
         </Box>
 
-        
         <Box
           sx={{
             marginTop: 4,
@@ -651,7 +660,7 @@ export default function PersistentDrawerLeft() {
                 <Tab label="Transcription" />
                 <Tab label="Notes" />
               </Tabs>
-              
+
               <IconButton
                 onClick={handleCopy}
                 aria-label="copy"
@@ -661,51 +670,53 @@ export default function PersistentDrawerLeft() {
               </IconButton>
             </Box>
 
-            {(transcriptionData) ? (<>
-              <Box
-              sx={{
-                position: "relative",
-                paddingX: 1,
-                paddingY: 2,
-                overflowY: "auto",
-              }}
-            >
-              {activeTab === 0 && (
-                <MarkdownText
-                  title="Transcription"
-                  transcription={transcriptionData.transcription}
-                  language={selectedLanguage}
-                  audioFileName={audioFileName}
-                />
-              )}
-              {activeTab === 1 && (
-                <MarkdownText
-                  title="Notes"
-                  transcription={transcriptionData.notes}
-                  language={selectedLanguage}
-                  audioFileName={audioFileName}
-                />
-              )}
-            </Box>
+            {transcriptionData ? (
+              <>
+                <Box
+                  sx={{
+                    position: "relative",
+                    paddingX: 1,
+                    paddingY: 2,
+                    overflowY: "auto",
+                  }}
+                >
+                  {activeTab === 0 && (
+                    <MarkdownText
+                      title="Transcription"
+                      transcription={transcriptionData.transcription}
+                      language={selectedLanguage}
+                      audioFileName={audioFileName}
+                    />
+                  )}
+                  {activeTab === 1 && (
+                    <MarkdownText
+                      title="Notes"
+                      transcription={transcriptionData.notes}
+                      language={selectedLanguage}
+                      audioFileName={audioFileName}
+                    />
+                  )}
+                </Box>
 
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                width: "100%",
-                marginTop: 2,
-              }}
-            >
-              <ExportPdfButton
-                contentToExport={
-                  activeTab === 0
-                    ? transcriptionData.transcription
-                    : transcriptionData.notes
-                }
-              />
-            </Box>
-            </>) : (
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    width: "100%",
+                    marginTop: 2,
+                  }}
+                >
+                  <ExportPdfButton
+                    contentToExport={
+                      activeTab === 0
+                        ? transcriptionData.transcription
+                        : transcriptionData.notes
+                    }
+                  />
+                </Box>
+              </>
+            ) : (
               <Typography
                 sx={{
                   padding: 2,
@@ -713,12 +724,13 @@ export default function PersistentDrawerLeft() {
                   fontStyle: "italic",
                 }}
               >
-                {(isLoadingResponse) ? "Loading..." : "No transcription or notes available."}
+                {isLoadingResponse
+                  ? "Loading..."
+                  : "No transcription or notes available."}
               </Typography>
             )}
           </Box>
         </Box>
-        
       </Main>
     </Box>
   );
