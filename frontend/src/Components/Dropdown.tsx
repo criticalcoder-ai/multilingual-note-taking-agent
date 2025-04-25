@@ -34,7 +34,7 @@ const Dropdown: React.FC<DropdownProps> = ({
     <FormControl
       sx={{
         flex: 1,
-        minWidth: 160,
+        minWidth: 200,
         borderRadius: "8px",
         "& .MuiOutlinedInput-notchedOutline": {
           borderColor: "white",

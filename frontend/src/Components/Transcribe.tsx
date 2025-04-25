@@ -30,12 +30,11 @@ import SearchIcon from "@mui/icons-material/Search";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, Tab, Box } from "@mui/material";
-import axios from "axios";
 
 import { copyToClipboard } from "../utils";
 import LanguageDropdown from "./Dropdown";
 import NotesModelDropdown from "./Dropdown";
-import AudioModelDropdown from "./Dropdown";
+import TransModelDropdown from "./Dropdown";
 import AudioDropzone from "./AudioDropzone";
 import Autoselect from "./Autoselect";
 import MarkdownText from "./MarkdownText";
@@ -127,23 +126,20 @@ const languageOptions = [
   { label: "German", value: "german" },
 ];
 
-const notesModelOptions = [
-  { label: "Deepseek (Default)", value: "deepseek_openrouter_api" },
-  { label: "Llama CPP", value: "llama_cpp_local" },
-  { label: "Qwen openrouter", value: "qwen_openrouter_api" },
-  { label: "Gemini openrouter", value: "gemini_openrouter_api" },
-  { label: "Dummy", value: "dummy" },
+const transModelOptions = [
+  { label: "Alibaba ASR (Default)", value: "alibaba_asr_api" },
+  { label: "Whisper", value: "whisper" },
+  { label: "dummy", value: "dummy" },
 ];
 
-const audioModelOptions = [
-  { label: "Whisper (Default)", value: "whisper" },
-  { label: "Alibaba ASR", value: "alibaba_asr_api" },
-  { label: "Dummy", value: "dummy" },
+const notesModelOptions = [
+  { label: "Qwen (Default)", value: "qwen_openrouter_api" },
+  { label: "Deepseek", value: "deepseek_openrouter_api" },
+  { label: "Gemini", value: "gemini_openrouter_api" },
+  { label: "dummy", value: "dummy" },
 ];
 
 export default function PersistentDrawerLeft() {
-  // const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-  const API_URL = "http://localhost:5000";
   const theme = useTheme();
   const navigate = useNavigate();
 
@@ -158,7 +154,7 @@ export default function PersistentDrawerLeft() {
   const [selectedNotesModel, setSelectedNotesModel] = useState<string>(
     "deepseek_openrouter_api",
   );
-  const [selectedAudioModel, setSelectedAudioModel] =
+  const [selectedTransModel, setSelectedTransModel] =
     useState<string>("whisper");
   const [prompt, setPrompt] = useState<string>("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -209,7 +205,7 @@ export default function PersistentDrawerLeft() {
       setPrompt("");
       setAudioFile(null);
       setSelectedNotesModel("deepseek_openrouter_api");
-      setSelectedAudioModel("whisper");
+      setSelectedTransModel("whisper");
       setAudioFileName("");
       setSelectedTags([]);
       setTranscriptionData(null);
@@ -266,7 +262,7 @@ export default function PersistentDrawerLeft() {
 
     if (isNewChat) {
       try {
-        const createRes = await axios.get(`${API_URL}/api/audio-sessions/new`);
+        const createRes = await api.get(`/api/audio-sessions/new`);
         currentSessionId = createRes.data;
         console.log("New session created with ID:", currentSessionId);
       } catch (error) {
@@ -291,7 +287,7 @@ export default function PersistentDrawerLeft() {
       Prompt: ${prompt}
       Language: ${selectedLanguage}
       Tags: ${tagsString}
-      Audio Model: ${selectedAudioModel}
+      Audio Model: ${selectedTransModel}
       Notes Model: ${selectedNotesModel}`);
 
     console.log("Sending payload:", formData);
@@ -367,32 +363,21 @@ export default function PersistentDrawerLeft() {
             Voice AI - Transcribe
           </Typography>
           <Box sx={{ flexGrow: 1 }} />
-          <Box sx={{ minWidth: 200, ml: "auto" }}>
-            <Box
-              sx={{
-                minWidth: 200,
-                ml: "auto",
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              <Box sx={{ mr: 2 }}>
-                <AudioModelDropdown
-                  title="Audio Model"
-                  options={audioModelOptions}
-                  value={selectedAudioModel}
-                  onChange={(val) => setSelectedAudioModel(val)}
-                />
-              </Box>
-              <Box>
-                <NotesModelDropdown
-                  title="Notes Model"
-                  options={notesModelOptions}
-                  value={selectedNotesModel}
-                  onChange={(val) => setSelectedNotesModel(val)}
-                />
-              </Box>
-            </Box>
+          <Box sx={{ minWidth: 150, ml: "auto", paddingRight: "1rem" }}>
+            <TransModelDropdown
+              title="Transcription Model"
+              options={transModelOptions}
+              value={selectedTransModel}
+              onChange={(val) => setSelectedTransModel(val)}
+            />
+          </Box>
+          <Box sx={{ minWidth: 150, ml: "auto" }}>
+            <NotesModelDropdown
+              title="Notes Model"
+              options={notesModelOptions}
+              value={selectedNotesModel}
+              onChange={(val) => setSelectedNotesModel(val)}
+            />
           </Box>
         </Toolbar>
       </AppBar>
