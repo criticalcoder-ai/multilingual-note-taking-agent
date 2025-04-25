@@ -185,19 +185,6 @@ export default function PersistentDrawerLeft() {
     },
   });
 
-  // const newSession = async () => {
-  //   try {
-  //     const res = await api.get(`/api/audio-sessions/new`);
-  //     const newSessionId = res.data;
-  //     console.log("New session created with ID:", newSessionId);
-
-  //     // Navigate to new chat page with that session ID
-  //     navigate({ to: `/chat/${newSessionId}` });
-  //   } catch (error) {
-  //     console.error("Error creating new session: ", error);
-  //   }
-  // };
-
   useEffect(() => {
     if (isNewChat) {
       setSessionName("New Session");
@@ -273,12 +260,16 @@ export default function PersistentDrawerLeft() {
     }
 
     const formData = new FormData();
-    formData.append("session_id", currentSessionId);
-    formData.append("session_name", sessionName);
     formData.append("file", audioFile);
-    formData.append("query_prompt", prompt);
-    formData.append("query_lang", selectedLanguage);
-    formData.append("query_audio_kind", tagsString);
+
+    const params = new URLSearchParams({
+      session_id: String(currentSessionId),
+      session_name: sessionName,
+      query_prompt: prompt,
+      query_lang: selectedLanguage,
+      query_audio_kind: tagsString,
+    });
+    
 
     window.alert(`
       Session ID: ${currentSessionId}
@@ -292,15 +283,8 @@ export default function PersistentDrawerLeft() {
 
     console.log("Sending payload:", formData);
 
-    // const url = new URL(`${API_URL}/api/transcribe-and-generate-notes/`);
-    // url.searchParams.append("session_id", currentSessionId);
-    // url.searchParams.append("session_name", sessionName);
-    // url.searchParams.append("query_lang", selectedLanguage);
-    // url.searchParams.append("query_prompt", prompt);
-    // url.searchParams.append("query_audio_kind", tagsString);
-
     try {
-      const res = await api.post(`/api/transcribe-and-generate-notes`, formData, {
+      const res = await api.post(`/api/transcribe-and-generate-notes?${params.toString()}`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
