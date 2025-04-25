@@ -39,6 +39,7 @@ import AudioModelDropdown from "./Dropdown";
 import AudioDropzone from "./AudioDropzone";
 import Autoselect from "./Autoselect";
 import MarkdownText from "./MarkdownText";
+import { api } from "../api/api";
 
 interface Session {
   id: number;
@@ -178,22 +179,28 @@ export default function PersistentDrawerLeft() {
   } = useQuery({
     queryKey: ["audio-sessions"],
     queryFn: async () => {
-      try {
-        const res = await axios.get(`${API_URL}/api/audio-sessions/`);
+      const res = await api.get(`/api/audio-sessions/`);
 
         if (!Array.isArray(res.data)) {
           throw new Error("Invalid response format: expected array");
         }
 
         return res.data;
-      } catch (err) {
-        if (axios.isAxiosError(err)) {
-          throw new Error(err.response?.data?.message || err.message);
-        }
-        throw err;
-      }
     },
   });
+
+  // const newSession = async () => {
+  //   try {
+  //     const res = await api.get(`/api/audio-sessions/new`);
+  //     const newSessionId = res.data;
+  //     console.log("New session created with ID:", newSessionId);
+
+  //     // Navigate to new chat page with that session ID
+  //     navigate({ to: `/chat/${newSessionId}` });
+  //   } catch (error) {
+  //     console.error("Error creating new session: ", error);
+  //   }
+  // };
 
   useEffect(() => {
     if (isNewChat) {
@@ -289,7 +296,7 @@ export default function PersistentDrawerLeft() {
 
     console.log("Sending payload:", formData);
 
-    const url = new URL(`${API_URL}/api/transcribe-and-generate-notes/`);
+    // const url = new URL(`${API_URL}/api/transcribe-and-generate-notes/`);
     // url.searchParams.append("session_id", currentSessionId);
     // url.searchParams.append("session_name", sessionName);
     // url.searchParams.append("query_lang", selectedLanguage);
@@ -297,7 +304,7 @@ export default function PersistentDrawerLeft() {
     // url.searchParams.append("query_audio_kind", tagsString);
 
     try {
-      const res = await axios.post(url.toString(), formData, {
+      const res = await api.post(`/api/transcribe-and-generate-notes`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -537,7 +544,7 @@ export default function PersistentDrawerLeft() {
             onClick={() => {
               if (isEditingName) {
                 // Call an API to update session_name in backend here if needed
-                // e.g. axios.post(`${API_URL}/api/audio-sessions/${sessionId}/rename`, { session_name: sessionName })
+                // e.g. api.post(`${API_URL}/api/audio-sessions/${sessionId}/rename`, { session_name: sessionName })
               }
               if ((sessionName === "" || null) && isEditingName === true) {
                 window.alert("Please enter a valid session name!");
