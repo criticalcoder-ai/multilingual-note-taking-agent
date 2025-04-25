@@ -1,52 +1,79 @@
-import { useState } from "react";
-import { TextField, Chip, Autocomplete, Box } from "@mui/material";
+import { TextField, Chip, Autocomplete } from "@mui/material";
+
+interface TagSelectorProps {
+  selectedTags: string[];
+  setSelectedTags: (tags: string[]) => void;
+}
 
 const tags = ["meeting", "interview", "podcast"];
 
-export default function TagSelector() {
-  const [selectedTags, setSelectedTags] = useState(tags);
-
+export default function TagSelector({ selectedTags, setSelectedTags }: TagSelectorProps) {
   return (
-    <Box
-      sx={{
-        width: "100%",
-        backgroundColor: "#003b54",
-        padding: 2,
-        borderRadius: 2,
+    <Autocomplete
+      multiple
+      id="tags-filled"
+      options={tags}
+      freeSolo
+      value={selectedTags}
+      onChange={(_, newValue) => {
+        setSelectedTags(newValue);
       }}
-    >
-      <Autocomplete
-        multiple
-        id="tags-filled"
-        options={[]}
-        freeSolo
-        value={selectedTags}
-        onChange={(_, newValue) => {
-          setSelectedTags(newValue);
-        }}
-        renderTags={(value, getTagProps) =>
-          value.map((option, index) => (
-            <Chip
-              variant="outlined"
-              label={option}
-              {...getTagProps({ index })}
-              key={option}
-            />
-          ))
-        }
-        renderInput={(params) => (
-          <TextField
-            {...params}
-            variant="filled"
-            placeholder="Enter your tags"
+      sx={{
+        backgroundColor: "black",
+        color: "white",
+        borderRadius: "8px",
+        "& .MuiInputBase-root": {
+          backgroundColor: "black",
+          color: "white",
+        },
+        "& .MuiOutlinedInput-root": {
+          "& fieldset": {
+            borderColor: "white",
+          },
+          "&:hover fieldset": {
+            borderColor: "white",
+          },
+          "&.Mui-focused fieldset": {
+            borderColor: "white",
+          },
+        },
+      }}
+      renderTags={(value, getTagProps) =>
+        value.map((option, index) => (
+          <Chip
+            variant="outlined"
+            label={option}
+            {...getTagProps({ index })}
+            key={option}
             sx={{
-              backgroundColor: "#fff",
-              borderRadius: 2,
-              fontFamily: "inherit",
+              backgroundColor: "white",
+              color: "black",
+              fontWeight: 500,
+              borderRadius: "6px",
             }}
           />
-        )}
-      />
-    </Box>
+        ))
+      }
+      renderInput={(params) => (
+        <TextField
+          {...params}
+          variant="outlined"
+          placeholder="Enter your tags"
+          InputProps={{
+            ...params.InputProps,
+            style: { color: "white", borderColor: "white" },
+          }}
+          sx={{
+            "& .MuiOutlinedInput-input": { color: "white" },
+            "& .MuiInputLabel-root": { color: "white" },
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": { borderColor: "white" },
+              "&:hover fieldset": { borderColor: "white" },
+              "&.Mui-focused fieldset": { borderColor: "white" },
+            },
+          }}
+        />
+      )}
+    />
   );
 }

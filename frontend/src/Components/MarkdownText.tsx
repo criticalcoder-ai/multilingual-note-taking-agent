@@ -3,17 +3,20 @@ import ReactMarkdown from "react-markdown";
 import { Box, Typography } from "@mui/material";
 
 interface MarkdownTextProps {
+  title: string;
   transcription: string | null;
   language: string | null;
   audioFileName: string | null;
 }
 
 const MarkdownText: React.FC<MarkdownTextProps> = ({
+  title,
   transcription,
   language,
   audioFileName,
 }) => {
   const [snapshot, setSnapshot] = useState({
+    title: "",
     transcription: "",
     language: "",
     audioFileName: "",
@@ -21,19 +24,20 @@ const MarkdownText: React.FC<MarkdownTextProps> = ({
 
   useEffect(() => {
     setSnapshot({
+      title: title || "N/A",
       transcription: transcription || "_No transcription available yet._",
       language: language || "N/A",
       audioFileName: audioFileName || "N/A",
     });
-  }, [transcription, language, audioFileName]);
+  }, [title, transcription, language, audioFileName]);
 
   const markdownContent = `
-# 📑 Transcription Summary
+# 📑 ${title} Summary
 
 - **Language:** ${snapshot.language}
 - **Audio File:** ${snapshot.audioFileName}
 
-**Transcription:**  
+**${title}:**  
 
 ${snapshot.transcription}
 `;

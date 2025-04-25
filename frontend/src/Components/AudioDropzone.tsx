@@ -18,7 +18,7 @@ const AudioDropzone: React.FC<AudioDropzoneProps> = ({
     (acceptedFiles: File[]) => {
       if (acceptedFiles.length > 0) {
         const file = acceptedFiles[0];
-        onFileAccepted(file); // Notify parent with new file
+        onFileAccepted(file);
       }
     },
     [onFileAccepted],
@@ -34,7 +34,7 @@ const AudioDropzone: React.FC<AudioDropzoneProps> = ({
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onFileAccepted(null); // Reset in parent
+    onFileAccepted(null);
   };
 
   const displayName = fileName

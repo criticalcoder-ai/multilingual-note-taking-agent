@@ -7,18 +7,20 @@ import {
   SelectChangeEvent,
 } from "@mui/material";
 
-type LanguageOption = {
+type Option = {
   label: string;
   value: string;
 };
 
-interface LanguageDropdownProps {
-  options: LanguageOption[];
+interface DropdownProps {
+  title: string;
+  options: Option[];
   value: string;
   onChange: (selectedValue: string) => void;
 }
 
-const LanguageDropdown: React.FC<LanguageDropdownProps> = ({
+const Dropdown: React.FC<DropdownProps> = ({
+  title,
   options,
   value,
   onChange,
@@ -46,13 +48,13 @@ const LanguageDropdown: React.FC<LanguageDropdownProps> = ({
       }}
       size="small"
     >
-      <InputLabel id="language-select-label" sx={{ color: "white" }}>
-        Language
+      <InputLabel id="option-select-label" sx={{ color: "white" }}>
+        {title}
       </InputLabel>
       <Select
-        labelId="language-select-label"
+        labelId="option-select-label"
         value={value}
-        label="Language"
+        label={title}
         onChange={handleChange}
         sx={{
           borderRadius: "8px",
@@ -69,4 +71,4 @@ const LanguageDropdown: React.FC<LanguageDropdownProps> = ({
   );
 };
 
-export default LanguageDropdown;
+export default Dropdown;

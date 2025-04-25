@@ -1,8 +1,5 @@
 import { styled, useTheme } from "@mui/material/styles";
 import { useState, useEffect } from "react";
-import Tabs from "@mui/material/Tabs";
-import Tab from "@mui/material/Tab";
-import Box from "@mui/material/Box";
 import ReplayIcon from "@mui/icons-material/Replay";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import Drawer from "@mui/material/Drawer";
@@ -30,10 +27,12 @@ import InputAdornment from "@mui/material/InputAdornment";
 import SearchIcon from "@mui/icons-material/Search";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { Tabs, Tab, Box } from '@mui/material';
 import axios from "axios";
 
 import { copyToClipboard } from "../utils";
 import LanguageDropdown from "./Dropdown";
+import ModelDropdown from './Dropdown'
 import AudioDropzone from "./AudioDropzone";
 import Autoselect from "./Autoselect";
 import MarkdownText from "./MarkdownText";
@@ -119,6 +118,11 @@ const languageOptions = [
   { label: "German", value: "german" },
 ];
 
+const modelOptions = [
+  { label: "Open AI", value: "openai" },
+  { label: "Qwen (Default)", value: "qwen" },
+];
+
 const transcribedTexts = {
   notes:
     "Lorem ipsum dolor sit amet consectetur adipisicing elit. Perferendis sint reprehenderit voluptatibus blanditiis ex quibusdam autem laborum facere corrupti cum ea, adipisci ducimus molestias. Maiores molestias eius nulla odit minus?",
@@ -130,15 +134,17 @@ export default function PersistentDrawerLeft() {
   const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
   const theme = useTheme();
   const navigate = useNavigate();
-  const { chatId } = useParams({ strict: false }) || { chatId: "1" };
 
+  const { chatId } = useParams({ strict: false }) || { chatId: "1" };
   const [open, setOpen] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState<string>("english");
+  const [selectedModel, setSelectedModel] = useState<string>("openai");
   const [prompt, setPrompt] = useState<string>("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioFileName, setAudioFileName] = useState<string>("");
-
   const [sendState, setSendState] = useState(true);
 
   // API Endpoints:
@@ -206,6 +212,47 @@ export default function PersistentDrawerLeft() {
     console.log(success ? "Text copied to clipboard!" : "Failed to copy text.");
   };
 
+  const handleSendRequest = async () => {
+    const tagsString = selectedTags.join(", ");
+
+    if(!audioFile) {
+      window.alert("Please upload an audio file!");
+      return;
+    }
+
+    const payload = {
+      session_id: chatId,
+      session_name: `Session: ${chatId}`,
+      file: audioFile,
+      query_prompt: prompt,
+      query_lang: selectedLanguage,
+      query_file: audioFileName,
+      query_audio_kind: tagsString,
+    };
+
+    console.log("Sending payload:", payload);
+
+    try {
+      // TODO: API Should be corrected
+      const res = await axios.post(`${API_URL}/api/audio-sessions/send`, payload, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      if (res.status === 200) {
+        console.log("Request successful:", res.data);
+        window.alert("Request sent successfully!");
+        setSendState(false);
+      } else {
+        console.error("Unexpected response:", res);
+      }
+    } catch (error) {
+      console.error("Error sending request:", error);
+      window.alert("Error sending request!");
+    }
+  }
+  
   const handleDrawerOpen = () => setOpen(true);
   const handleDrawerClose = () => setOpen(false);
 
@@ -243,6 +290,15 @@ export default function PersistentDrawerLeft() {
           <Typography variant="h6" noWrap component="div">
             Voice AI - Transcribe
           </Typography>
+          <Box sx={{ flexGrow: 1 }} />
+          <Box sx={{ minWidth: 150, ml: 'auto' }}>
+            <ModelDropdown
+              title="Model"
+              options={modelOptions}
+              value={selectedModel}
+              onChange={(val) => setSelectedModel(val)}
+            />
+          </Box>
         </Toolbar>
       </AppBar>
 
@@ -270,9 +326,28 @@ export default function PersistentDrawerLeft() {
             ...theme.mixins.toolbar,
           }}
         >
-          <Typography variant="h6" marginLeft={1.5}>
-            History
-          </Typography>
+          <Button
+            sx={{
+              alignSelf: "center",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              paddingX: 1,
+              paddingY: 1,
+              margin: 0,
+              cursor: "pointer",
+              color: "black",
+              "&:hover": {
+                backgroundColor: "black",
+                color: "white",
+              },
+            }}
+            onClick={() => {
+              newSession();
+            }}
+        >
+          <AddCommentIcon />
+        </Button>
 
           <IconButton onClick={handleDrawerClose}>
             {theme.direction === "ltr" ? (
@@ -334,33 +409,6 @@ export default function PersistentDrawerLeft() {
             </ListItem>
           )}
         </List>
-
-        <Button
-          variant="outlined"
-          startIcon={<AddCommentIcon />}
-          sx={{
-            alignSelf: "center",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            border: "1px solid black",
-            borderRadius: "8px",
-            paddingX: 4,
-            paddingY: 1,
-            margin: 2,
-            cursor: "pointer",
-            color: "black",
-            "&:hover": {
-              backgroundColor: "black",
-              color: "white",
-            },
-          }}
-          onClick={() => {
-            newSession();
-          }}
-        >
-          New Chat
-        </Button>
       </Drawer>
 
       <Main open={open} sx={{ height: "100%" }}>
@@ -383,7 +431,7 @@ export default function PersistentDrawerLeft() {
             padding: 2,
             border: "1px solid white",
             borderRadius: "8px",
-            backgroundColor: "#003049",
+            backgroundColor: "primary.main",
             color: "white",
           }}
         >
@@ -396,9 +444,11 @@ export default function PersistentDrawerLeft() {
                 onFileAccepted={(file) => {
                   if (file) {
                     setAudioFileName(file.name);
+                    setAudioFile(file);
                     console.log("Accepted file:", file);
                   } else {
                     setAudioFileName("");
+                    setAudioFile(null);
                     console.log("File removed");
                   }
                 }}
@@ -415,11 +465,12 @@ export default function PersistentDrawerLeft() {
                 paddingX: 2,
                 paddingY: 1.5,
                 color: "white",
-                backgroundColor: "#003049",
+                backgroundColor: "primary.main",
                 minHeight: "56px",
               }}
             >
               <LanguageDropdown
+                title="Language"
                 options={languageOptions}
                 value={selectedLanguage}
                 onChange={(val) => setSelectedLanguage(val)}
@@ -427,7 +478,7 @@ export default function PersistentDrawerLeft() {
             </Box>
           </Box>
 
-          <Autoselect />
+          <Autoselect selectedTags={selectedTags} setSelectedTags={setSelectedTags} />
 
           <Box
             component="textarea"
@@ -437,8 +488,8 @@ export default function PersistentDrawerLeft() {
             rows={4}
             sx={{
               width: "100%",
-              backgroundColor: "white",
-              color: "black",
+              backgroundColor: "black",
+              color: "white",
               border: "1px solid white",
               borderRadius: "8px",
               padding: 1,
@@ -448,6 +499,7 @@ export default function PersistentDrawerLeft() {
 
           <Button
             variant="outlined"
+            onClick={handleSendRequest}
             sx={{
               alignSelf: "center",
               display: "flex",
@@ -462,9 +514,6 @@ export default function PersistentDrawerLeft() {
               "&:hover": {
                 backgroundColor: "green",
               },
-            }}
-            onClick={() => {
-              setSendState(false);
             }}
           >
             {sendState ? (
@@ -519,6 +568,7 @@ export default function PersistentDrawerLeft() {
                 <Tab label="Transcription" />
                 <Tab label="Notes" />
               </Tabs>
+              
               <IconButton
                 onClick={handleCopy}
                 aria-label="copy"
@@ -533,12 +583,12 @@ export default function PersistentDrawerLeft() {
                 position: "relative",
                 paddingX: 1,
                 paddingY: 2,
-                height: 300,
                 overflowY: "auto",
               }}
             >
               {activeTab === 0 && (
                 <MarkdownText
+                  title="Transcription"
                   transcription={transcribedTexts.transcription}
                   language={selectedLanguage}
                   audioFileName={audioFileName}
@@ -546,6 +596,7 @@ export default function PersistentDrawerLeft() {
               )}
               {activeTab === 1 && (
                 <MarkdownText
+                  title="Notes"
                   transcription={transcribedTexts.notes}
                   language={selectedLanguage}
                   audioFileName={audioFileName}
