@@ -16,6 +16,8 @@ import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
+import CheckIcon from "@mui/icons-material/Check";
+import EditIcon from "@mui/icons-material/Edit";
 import ListItemText from "@mui/material/ListItemText";
 import AddCommentIcon from "@mui/icons-material/AddComment";
 import Button from "@mui/material/Button";
@@ -45,6 +47,11 @@ interface Session {
   created_time: string;
   query_file: string;
   query_audio_kind: string;
+}
+
+interface TranscriptionResponse {
+  notes: string;
+  transcription: string;
 }
 
 const drawerWidth = 250;
@@ -119,23 +126,21 @@ const languageOptions = [
 ];
 
 const modelOptions = [
+  { label: "Deepseek (Default", value: "deepseek" },
   { label: "Open AI", value: "openai" },
-  { label: "Qwen (Default)", value: "qwen" },
+  { label: "Qwen", value: "qwen" },
+  { label: "Gemini", value: "gemini" },
 ];
-
-const transcribedTexts = {
-  notes:
-    "Lorem ipsum dolor sit amet consectetur adipisicing elit. Perferendis sint reprehenderit voluptatibus blanditiis ex quibusdam autem laborum facere corrupti cum ea, adipisci ducimus molestias. Maiores molestias eius nulla odit minus?",
-  transcription:
-    "Not a Lorem ipsum dolor sit amet consectetur adipisicing elit. Perferendis sint reprehenderit voluptatibus blanditiis ex quibusdam autem laborum facere corrupti cum ea, adipisci ducimus molestias. Maiores molestias eius nulla odit minus?",
-};
 
 export default function PersistentDrawerLeft() {
   const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
   const theme = useTheme();
   const navigate = useNavigate();
 
-  const { chatId } = useParams({ strict: false }) || { chatId: "1" };
+  const { sessionId } = useParams({ strict: false }) || { sessionId: "1" };
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [sessionName, setSessionName] = useState(sessionId || "New Session");
+
   const [open, setOpen] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
@@ -146,6 +151,8 @@ export default function PersistentDrawerLeft() {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioFileName, setAudioFileName] = useState<string>("");
   const [sendState, setSendState] = useState(true);
+  const [transcriptionData, setTranscriptionData] = useState<TranscriptionResponse | null>(null);
+  const [isLoadingResponse, setIsLoadingResponse] = useState(false);
 
   // API Endpoints:
   const {
@@ -191,23 +198,34 @@ export default function PersistentDrawerLeft() {
   };
 
   useEffect(() => {
-    if (sessions.length > 0 && chatId) {
-      const session = sessions.find((s: Session) => s.session_name === chatId);
+    if (sessions.length > 0 && sessionId) {
+      const session = sessions.find((s: Session) => s.id.toString() === sessionId);
       if (session) {
+        setSessionName(session.session_name);
         setSelectedLanguage(session.query_lang.toLowerCase());
         setPrompt(session.query_prompt);
         setAudioFileName(session.query_file);
+        
+        // If this session already has data, show the transcription/notes tabs
+        if (session.transcription || session.notes) {
+          setTranscriptionData({
+            transcription: session.transcription || "",
+            notes: session.notes || ""
+          });
+        }
       }
     }
-  }, [sessions, chatId]);
+  }, [sessions, sessionId]);
 
   const filteredChats = sessions.filter((session: Session) =>
     session.session_name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const handleCopy = async () => {
+    if (!transcriptionData) return;
+    
     const textToCopy =
-      activeTab === 0 ? transcribedTexts.notes : transcribedTexts.transcription;
+      activeTab === 0 ? transcriptionData.transcription : transcriptionData.notes;
     const success = await copyToClipboard(textToCopy);
     console.log(success ? "Text copied to clipboard!" : "Failed to copy text.");
   };
@@ -220,21 +238,20 @@ export default function PersistentDrawerLeft() {
       return;
     }
 
-    const payload = {
-      session_id: chatId,
-      session_name: `Session: ${chatId}`,
-      file: audioFile,
-      query_prompt: prompt,
-      query_lang: selectedLanguage,
-      query_file: audioFileName,
-      query_audio_kind: tagsString,
-    };
+    const formData = new FormData();
+    formData.append("session_id", sessionId);
+    formData.append("session_name", sessionName);
+    formData.append("file", audioFile);
+    formData.append("query_prompt", prompt);
+    formData.append("query_lang", selectedLanguage);
+    formData.append("query_file", audioFileName);
+    formData.append("query_audio_kind", tagsString);
 
-    console.log("Sending payload:", payload);
+    console.log("Sending payload:", formData);
 
+    setIsLoadingResponse(true);
     try {
-      // TODO: API Should be corrected
-      const res = await axios.post(`${API_URL}/api/audio-sessions/send`, payload, {
+      const res = await axios.post(`${API_URL}/api/audio-sessions/send`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -242,7 +259,10 @@ export default function PersistentDrawerLeft() {
 
       if (res.status === 200) {
         console.log("Request successful:", res.data);
-        window.alert("Request sent successfully!");
+        setTranscriptionData({
+          transcription: res.data.transcription || "",
+          notes: res.data.notes || ""
+        });
         setSendState(false);
       } else {
         console.error("Unexpected response:", res);
@@ -250,6 +270,8 @@ export default function PersistentDrawerLeft() {
     } catch (error) {
       console.error("Error sending request:", error);
       window.alert("Error sending request!");
+    } finally {
+      setIsLoadingResponse(false);
     }
   }
   
@@ -345,9 +367,9 @@ export default function PersistentDrawerLeft() {
             onClick={() => {
               newSession();
             }}
-        >
-          <AddCommentIcon />
-        </Button>
+          >
+            <AddCommentIcon />
+          </Button>
 
           <IconButton onClick={handleDrawerClose}>
             {theme.direction === "ltr" ? (
@@ -393,7 +415,7 @@ export default function PersistentDrawerLeft() {
               <ListItem key={session.id} disablePadding>
                 <ListItemButton
                   onClick={() =>
-                    navigate({ to: `/chat/${session.session_name}` })
+                    navigate({ to: `/chat/${session.id}` })
                   }
                 >
                   <ListItemIcon>
@@ -413,16 +435,64 @@ export default function PersistentDrawerLeft() {
 
       <Main open={open} sx={{ height: "100%" }}>
         <DrawerHeader />
-        <Typography
-          sx={{
-            color: "black",
-            mb: 2,
-          }}
-          fontSize="1.5rem"
-          fontWeight="bold"
-        >
-          {chatId}
-        </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+          {isEditingName ? (
+            <TextField
+              value={sessionName}
+              onChange={(e) => setSessionName(e.target.value)}
+              variant="outlined"
+              size="small"
+              sx={{
+                fontSize: "1.5rem",
+                fontWeight: "bold",
+                input: { color: "black", fontWeight: 600, fontSize: "1.25rem" },
+                "& .MuiOutlinedInput-root": {
+                  "& fieldset": {
+                    borderColor: "black",
+                  },
+                  "&:hover fieldset": {
+                    borderColor: "black",
+                  },
+                  "&.Mui-focused fieldset": {
+                    borderColor: "black",
+                  },
+                },
+              }}
+            />
+          ) : (
+            <Typography
+              sx={{ color: "black" }}
+              fontSize="1.5rem"
+              fontWeight="bold"
+            >
+              {sessionName}
+            </Typography>
+          )}
+
+          <IconButton
+            onClick={() => {
+              if (isEditingName) {
+                // Call an API to update session_name in backend here if needed
+                // e.g. axios.post(`${API_URL}/api/audio-sessions/${sessionId}/rename`, { session_name: sessionName })
+              }
+              if((sessionName === "" || null) && isEditingName === true) {
+                  window.alert("Please enter a valid session name!");
+                  return;
+              }
+              setIsEditingName(!isEditingName);
+            }}
+            size="small"
+            sx={{
+              color: "black",
+              border: "1px solid black",
+              borderRadius: 1,
+              padding: "4px",
+            }}
+          >
+            {isEditingName ? <CheckIcon fontSize="small" /> : <EditIcon fontSize="small" />}
+          </IconButton>
+        </Box>
+
         <Box
           sx={{
             display: "flex",
@@ -500,6 +570,7 @@ export default function PersistentDrawerLeft() {
           <Button
             variant="outlined"
             onClick={handleSendRequest}
+            disabled={isLoadingResponse}
             sx={{
               alignSelf: "center",
               display: "flex",
@@ -514,17 +585,29 @@ export default function PersistentDrawerLeft() {
               "&:hover": {
                 backgroundColor: "green",
               },
+              "&:disabled": {
+                opacity: 0.7,
+                cursor: "not-allowed",
+              },
             }}
           >
-            {sendState ? (
-              <SendIcon sx={{ marginRight: 1 }} />
+            {isLoadingResponse ? (
+              <>Loading...</>
+            ) : sendState ? (
+              <>
+                <SendIcon sx={{ marginRight: 1 }} />
+                Send
+              </>
             ) : (
-              <ReplayIcon sx={{ marginRight: 1 }} />
+              <>
+                <ReplayIcon sx={{ marginRight: 1 }} />
+                Retry
+              </>
             )}
-            {sendState ? "Send" : "Retry"}
           </Button>
         </Box>
 
+        
         <Box
           sx={{
             marginTop: 4,
@@ -578,7 +661,8 @@ export default function PersistentDrawerLeft() {
               </IconButton>
             </Box>
 
-            <Box
+            {(transcriptionData) ? (<>
+              <Box
               sx={{
                 position: "relative",
                 paddingX: 1,
@@ -589,7 +673,7 @@ export default function PersistentDrawerLeft() {
               {activeTab === 0 && (
                 <MarkdownText
                   title="Transcription"
-                  transcription={transcribedTexts.transcription}
+                  transcription={transcriptionData.transcription}
                   language={selectedLanguage}
                   audioFileName={audioFileName}
                 />
@@ -597,7 +681,7 @@ export default function PersistentDrawerLeft() {
               {activeTab === 1 && (
                 <MarkdownText
                   title="Notes"
-                  transcription={transcribedTexts.notes}
+                  transcription={transcriptionData.notes}
                   language={selectedLanguage}
                   audioFileName={audioFileName}
                 />
@@ -616,13 +700,25 @@ export default function PersistentDrawerLeft() {
               <ExportPdfButton
                 contentToExport={
                   activeTab === 0
-                    ? transcribedTexts.notes
-                    : transcribedTexts.transcription
+                    ? transcriptionData.transcription
+                    : transcriptionData.notes
                 }
               />
             </Box>
+            </>) : (
+              <Typography
+                sx={{
+                  padding: 2,
+                  fontWeight: "bold",
+                  fontStyle: "italic",
+                }}
+              >
+                {(isLoadingResponse) ? "Loading..." : "No transcription or notes available."}
+              </Typography>
+            )}
           </Box>
         </Box>
+        
       </Main>
     </Box>
   );

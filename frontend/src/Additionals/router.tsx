@@ -13,7 +13,7 @@ const rootRoute = createRootRoute({
 
 const chatRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/chat/$chatId",
+  path: "/chat/$sessionId",
   component: PersistentDrawerLeft,
 });
 

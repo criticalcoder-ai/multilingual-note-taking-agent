@@ -25,7 +25,6 @@ const ExportPdfButton: React.FC<ExportPdfButtonProps> = ({
       pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
       pdf.save("exported-content.pdf");
 
-      alert("PDF Exported successfully!");
     }
   };
 
