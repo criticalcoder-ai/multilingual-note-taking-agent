@@ -150,7 +150,7 @@ def generate_notes_from_transcript_qwen_openrouter_api(
 
     print(f"hello from openrouter qwen api call, {transcript=}")
 
-    api_key = os.getenv("OPENROUTER_API_KEY")
+    api_key = os.environ.get("OPENROUTER_API_KEY")
     if not api_key:
         raise ValueError("OPENROUTER_API_KEY not found in .env")
 
@@ -173,6 +173,7 @@ def generate_notes_from_transcript_qwen_openrouter_api(
         "model": "qwen/qwq-32b:free",
         "messages": [{"role": "user", "content": prompt}],
     }
+    print(f"request headers {headers=}")
 
     response = requests.post(url, headers=headers, data=json.dumps(payload))
 
