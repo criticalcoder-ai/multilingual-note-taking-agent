@@ -129,6 +129,7 @@ const languageOptions = [
 const transModelOptions = [
   { label: "Alibaba ASR (Default)", value: "alibaba_asr_api" },
   { label: "Whisper", value: "whisper" },
+  { label: "Faster-Whisper", value: "faster_whisper" },
   { label: "dummy", value: "dummy" },
 ];
 

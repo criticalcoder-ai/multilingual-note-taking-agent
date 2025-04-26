@@ -159,7 +159,7 @@ async def transcribe_and_generate_notes(
     session_id: int = Query(...),
     file: UploadFile = File(...),
     transcription_method: TranscriptionMethod = Query(
-        default=TranscriptionMethod.alibaba_asr_api
+        default=TranscriptionMethod.faster_whisper
     ),
     notes_method: NotesMethod = Query(default=NotesMethod.deepseek_openrouter_api),
     session_name: str = Query(default="default-session-name"),

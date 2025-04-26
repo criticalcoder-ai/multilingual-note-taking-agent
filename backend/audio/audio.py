@@ -8,12 +8,73 @@ import requests
 from enum import Enum
 from dotenv import load_dotenv
 
+try:
+    from faster_whisper import WhisperModel, BatchedInferencePipeline
+except ImportError:
+    WhisperModel, BatchedInferencePipeline = None, None
+
 
 # Enum for transcription method
 class TranscriptionMethod(str, Enum):
     whisper = "whisper"
+    faster_whisper = "faster_whisper"
     alibaba_asr_api = "alibaba_asr_api"
     dummy = "dummy"
+
+
+def transcribe_with_faster_whisper_batched(
+    path: str, query_lang=None, query_prompt=None, query_audio_kind=None
+) -> str:
+    if WhisperModel is None:
+        raise ImportError("Whisperx module is not installed.")
+    if BatchedInferencePipeline is None:
+        raise ImportError("torch module is not installed.")
+
+    model = WhisperModel(
+        "turbo",
+        device="cpu",
+        compute_type="int8",
+    )
+    batched_model = BatchedInferencePipeline(model=model)
+
+    # Build initial_prompt from parameters with null checking
+    initial_prompt_parts = []
+    if query_prompt is not None:
+        initial_prompt_parts.append("user prompt: ")
+        initial_prompt_parts.append(query_prompt)
+    if query_lang is not None:
+        initial_prompt_parts.append("lang: ")
+        initial_prompt_parts.append(query_lang)
+    if query_audio_kind is not None:
+        initial_prompt_parts.append("audio_kind: ")
+        initial_prompt_parts.append(query_audio_kind)
+    initial_prompt = ", ".join(initial_prompt_parts) if initial_prompt_parts else None
+
+    segments, info = batched_model.transcribe(
+        path,
+        batch_size=16,
+        # language=language,
+        word_timestamps=True,
+        condition_on_previous_text=False,
+        initial_prompt=initial_prompt,
+    )
+
+    segments = list(segments)
+
+    lines = []
+    for segment in segments:
+        line = f"[{segment.start:.2f}s -> {segment.end:.2f}s] {segment.text}"
+        lines.append(line)
+
+    text = "\n".join(lines)
+
+    if not isinstance(text, str):
+        raise TypeError(
+            f"Expected transcription to be a string, got {type(text).__name__}"
+        )
+
+    print(f"transcribed the mp3 {text=}")
+    return text
 
 
 def transcribe_with_whisper(
@@ -102,6 +163,10 @@ def transcribe_mp3(
 
     if method == TranscriptionMethod.whisper:
         transcription = transcribe_with_whisper(
+            path, query_lang, query_prompt, query_audio_kind
+        )
+    elif method == TranscriptionMethod.faster_whisper:
+        transcription = transcribe_with_faster_whisper_batched(
             path, query_lang, query_prompt, query_audio_kind
         )
     elif method == TranscriptionMethod.alibaba_asr_api:
