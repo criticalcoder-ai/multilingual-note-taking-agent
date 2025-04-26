@@ -161,7 +161,7 @@ async def transcribe_and_generate_notes(
     transcription_method: TranscriptionMethod = Query(
         default=TranscriptionMethod.faster_whisper
     ),
-    notes_method: NotesMethod = Query(default=NotesMethod.deepseek_openrouter_api),
+    notes_method: NotesMethod = Query(default=NotesMethod.qwen_openrouter_api),
     session_name: str = Query(default="default-session-name"),
     query_lang: str = Query(default="en"),
     query_prompt: str = Query(default=""),

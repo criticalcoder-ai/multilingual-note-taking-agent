@@ -315,6 +315,8 @@ export default function PersistentDrawerLeft() {
     const params = new URLSearchParams({
       session_id: String(currentSessionId),
       session_name: sessionName,
+      transcription_method: selectedTransModel,
+      notes_method: selectedNotesModel,
       query_prompt: prompt,
       query_lang: selectedLanguage,
       query_audio_kind: tagsString,
