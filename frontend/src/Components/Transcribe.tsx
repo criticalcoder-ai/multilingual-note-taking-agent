@@ -29,7 +29,7 @@ import InputAdornment from "@mui/material/InputAdornment";
 import SearchIcon from "@mui/icons-material/Search";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Tabs, Tab, Box } from "@mui/material";
+import { Tabs, Tab, Box, CircularProgress } from "@mui/material";
 
 import { copyToClipboard } from "../utils";
 import LanguageDropdown from "./Dropdown";
@@ -154,6 +154,7 @@ export default function PersistentDrawerLeft() {
   const navigate = useNavigate();
 
   const { sessionId } = useParams({ strict: false }) || { sessionId: "1" };
+  console.log("sessionId", sessionId);
   const [isEditingName, setIsEditingName] = useState(false);
   const [sessionName, setSessionName] = useState(sessionId || "New Session");
 
@@ -201,10 +202,28 @@ export default function PersistentDrawerLeft() {
     isLoading: searchIsLoading,
     isError: searchIsErr,
   } = useQuery({
-    queryKey: ["search", searchTerm],
+    queryKey: ["search", "audio-sessions", searchTerm],
     queryFn: () => fetchSearchResults(searchTerm),
     enabled: searchTerm.length > 0,
   });
+
+  const {
+    data: currSession = null,
+    isLoading: currSessionLoading,
+    isError: currSessionIsErr,
+    error: currSessionErr,
+  } = useQuery({
+    queryKey: ["audio-sessions", "curr-session", sessionId],
+    queryFn: async () => {
+      console.log("hello from currsess query ");
+      const res = await api.get(`/api/audio-sessions/${sessionId}/`);
+      console.log("hello from currsess query - res:", res);
+
+      return res.data;
+    },
+    enabled: sessionId !== undefined,
+  });
+  console.log("currSession", currSession);
 
   useEffect(() => {
     if (isNewChat) {
@@ -222,26 +241,26 @@ export default function PersistentDrawerLeft() {
     }
 
     console.log("sessions.length", sessions.length);
-    if (sessions.length > 0 && sessionId) {
-      const session = sessions.find(
-        (s: Session) => s.id.toString() === sessionId,
-      );
-      if (session) {
-        setSessionName(session.session_name);
-        setSelectedLanguage(session.query_lang.toLowerCase());
-        setPrompt(session.query_prompt);
-        setAudioFileName(session.query_file);
 
-        // If this session already has data, show the transcription/notes tabs
-        if (session.transcription || session.notes) {
-          setTranscriptionData({
-            transcription: session.transcription || "",
-            notes: session.notes || "",
-          });
-        }
+    if (currSession) {
+      console.log("currSession", currSession);
+      setSessionName(currSession.session_name);
+      setSelectedLanguage(currSession.query_lang.toLowerCase());
+      setPrompt(currSession.query_prompt);
+      setAudioFileName(currSession.query_file);
+
+      // If this session already has data, show the transcription/notes tabs
+      if (
+        currSession?.output?.transcription_text ||
+        currSession?.output?.notes_text
+      ) {
+        setTranscriptionData({
+          transcription: currSession?.output?.transcription_text || "",
+          notes: currSession?.output?.notes_text || "",
+        });
       }
     }
-  }, [sessions, sessionId, isNewChat]);
+  }, [sessions, sessionId, isNewChat, currSession]);
 
   console.log("searchTerm.length", searchTerm.length);
   console.log("searchSessions", searchSessions);
@@ -344,12 +363,14 @@ export default function PersistentDrawerLeft() {
   const handleDrawerOpen = () => setOpen(true);
   const handleDrawerClose = () => setOpen(false);
 
-  if (isLoading) {
-    return <Typography>Loading sessions...</Typography>;
-  }
-
   if (isError) {
     return <Typography>Error fetching sessions. {error?.message}</Typography>;
+  }
+
+  if (currSessionIsErr) {
+    return (
+      <Typography>Error fetching session {currSessionErr.message}</Typography>
+    );
   }
 
   return (
@@ -397,7 +418,6 @@ export default function PersistentDrawerLeft() {
           </Box>
         </Toolbar>
       </AppBar>
-
       <Drawer
         sx={{
           width: drawerWidth,
@@ -484,7 +504,12 @@ export default function PersistentDrawerLeft() {
             overflowY: "auto",
           }}
         >
-          {filteredChats.length > 0 ? (
+          {isLoading || true ? (
+            <CircularProgress
+              color="primary"
+              sx={{ position: "relative", left: "5rem", top: "1rem" }}
+            />
+          ) : filteredChats.length > 0 ? (
             filteredChats.map((session: Session) => (
               <ListItem key={session.id} disablePadding>
                 <ListItemButton
@@ -504,303 +529,313 @@ export default function PersistentDrawerLeft() {
           )}
         </List>
       </Drawer>
-
-      <Main open={open} sx={{ height: "100%" }}>
-        <DrawerHeader />
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-          {isEditingName ? (
-            <TextField
-              value={sessionName}
-              onChange={(e) => setSessionName(e.target.value)}
-              variant="outlined"
-              size="small"
-              sx={{
-                fontSize: "1.5rem",
-                fontWeight: "bold",
-                input: { color: "black", fontWeight: 600, fontSize: "1.25rem" },
-                "& .MuiOutlinedInput-root": {
-                  "& fieldset": {
-                    borderColor: "black",
-                  },
-                  "&:hover fieldset": {
-                    borderColor: "black",
-                  },
-                  "&.Mui-focused fieldset": {
-                    borderColor: "black",
-                  },
-                },
-              }}
-            />
-          ) : (
-            <Typography
-              sx={{ color: "black" }}
-              fontSize="1.5rem"
-              fontWeight="bold"
-            >
-              {sessionName}
-            </Typography>
-          )}
-
-          <IconButton
-            onClick={() => {
-              if (isEditingName) {
-                // Call an API to update session_name in backend here if needed
-                // e.g. api.post(`${API_URL}/api/audio-sessions/${sessionId}/rename`, { session_name: sessionName })
-              }
-              if ((sessionName === "" || null) && isEditingName === true) {
-                window.alert("Please enter a valid session name!");
-                return;
-              }
-              setIsEditingName(!isEditingName);
-            }}
-            size="small"
-            sx={{
-              color: "black",
-              border: "1px solid black",
-              borderRadius: 1,
-              padding: "4px",
-            }}
-          >
+      {currSessionLoading ? (
+        <CircularProgress
+          color="primary"
+          sx={{ position: "relative", left: "3rem", top: "5rem" }}
+        />
+      ) : (
+        <Main open={open} sx={{ height: "100%" }}>
+          <DrawerHeader />
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
             {isEditingName ? (
-              <CheckIcon fontSize="small" />
-            ) : (
-              <EditIcon fontSize="small" />
-            )}
-          </IconButton>
-        </Box>
-
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 2,
-            padding: 2,
-            border: "1px solid white",
-            borderRadius: "8px",
-            backgroundColor: "primary.main",
-            color: "white",
-          }}
-        >
-          <Box
-            sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}
-          >
-            <Box sx={{ flex: 1 }}>
-              <AudioDropzone
-                fileName={audioFileName}
-                onFileAccepted={(file) => {
-                  if (file) {
-                    setAudioFileName(file.name);
-                    setAudioFile(file);
-                    console.log("Accepted file:", file);
-                  } else {
-                    setAudioFileName("");
-                    setAudioFile(null);
-                    console.log("File removed");
-                  }
+              <TextField
+                value={sessionName}
+                onChange={(e) => setSessionName(e.target.value)}
+                variant="outlined"
+                size="small"
+                sx={{
+                  fontSize: "1.5rem",
+                  fontWeight: "bold",
+                  input: {
+                    color: "black",
+                    fontWeight: 600,
+                    fontSize: "1.25rem",
+                  },
+                  "& .MuiOutlinedInput-root": {
+                    "& fieldset": {
+                      borderColor: "black",
+                    },
+                    "&:hover fieldset": {
+                      borderColor: "black",
+                    },
+                    "&.Mui-focused fieldset": {
+                      borderColor: "black",
+                    },
+                  },
                 }}
               />
-            </Box>
+            ) : (
+              <Typography
+                sx={{ color: "black" }}
+                fontSize="1.5rem"
+                fontWeight="bold"
+              >
+                {sessionName}
+              </Typography>
+            )}
 
-            <Box
+            <IconButton
+              onClick={() => {
+                if (isEditingName) {
+                  // Call an API to update session_name in backend here if needed
+                  // e.g. api.post(`${API_URL}/api/audio-sessions/${sessionId}/rename`, { session_name: sessionName })
+                }
+                if ((sessionName === "" || null) && isEditingName === true) {
+                  window.alert("Please enter a valid session name!");
+                  return;
+                }
+                setIsEditingName(!isEditingName);
+              }}
+              size="small"
               sx={{
-                flex: 1,
-                border: "1px dashed white",
-                borderRadius: "8px",
-                display: "flex",
-                alignItems: "center",
-                paddingX: 2,
-                paddingY: 1.5,
-                color: "white",
-                backgroundColor: "primary.main",
-                minHeight: "56px",
+                color: "black",
+                border: "1px solid black",
+                borderRadius: 1,
+                padding: "4px",
               }}
             >
-              <LanguageDropdown
-                title="Language"
-                options={languageOptions}
-                value={selectedLanguage}
-                onChange={(val) => setSelectedLanguage(val)}
-              />
-            </Box>
+              {isEditingName ? (
+                <CheckIcon fontSize="small" />
+              ) : (
+                <EditIcon fontSize="small" />
+              )}
+            </IconButton>
           </Box>
 
-          <Autoselect
-            selectedTags={selectedTags}
-            setSelectedTags={setSelectedTags}
-          />
-
           <Box
-            component="textarea"
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Enter your prompt here:"
-            rows={4}
             sx={{
-              width: "100%",
-              backgroundColor: "black",
-              color: "white",
-              border: "1px solid white",
-              borderRadius: "8px",
-              padding: 1,
-              resize: "none",
-            }}
-          />
-
-          <Button
-            variant="outlined"
-            onClick={handleSendRequest}
-            disabled={isLoadingResponse}
-            sx={{
-              alignSelf: "center",
               display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              flexDirection: "column",
+              gap: 2,
+              padding: 2,
               border: "1px solid white",
               borderRadius: "8px",
-              paddingX: 4,
-              paddingY: 1,
-              cursor: "pointer",
+              backgroundColor: "primary.main",
               color: "white",
-              "&:hover": {
-                backgroundColor: "green",
-              },
-              "&:disabled": {
-                opacity: 0.7,
-                cursor: "not-allowed",
-              },
             }}
           >
-            {isLoadingResponse ? (
-              <>Loading...</>
-            ) : sendState ? (
-              <>
-                <SendIcon sx={{ marginRight: 1 }} />
-                Send
-              </>
-            ) : (
-              <>
-                <ReplayIcon sx={{ marginRight: 1 }} />
-                Retry
-              </>
-            )}
-          </Button>
-        </Box>
+            <Box
+              sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}
+            >
+              <Box sx={{ flex: 1 }}>
+                <AudioDropzone
+                  fileName={audioFileName}
+                  onFileAccepted={(file) => {
+                    if (file) {
+                      setAudioFileName(file.name);
+                      setAudioFile(file);
+                      console.log("Accepted file:", file);
+                    } else {
+                      setAudioFileName("");
+                      setAudioFile(null);
+                      console.log("File removed");
+                    }
+                  }}
+                />
+              </Box>
 
-        <Box
-          sx={{
-            marginTop: 4,
-            border: "1px solid white",
-            borderRadius: "8px",
-            backgroundColor: "#1e1e1e",
-            color: "white",
-            overflow: "hidden",
-          }}
-        >
+              <Box
+                sx={{
+                  flex: 1,
+                  border: "1px dashed white",
+                  borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  paddingX: 2,
+                  paddingY: 1.5,
+                  color: "white",
+                  backgroundColor: "primary.main",
+                  minHeight: "56px",
+                }}
+              >
+                <LanguageDropdown
+                  title="Language"
+                  options={languageOptions}
+                  value={selectedLanguage}
+                  onChange={(val) => setSelectedLanguage(val)}
+                />
+              </Box>
+            </Box>
+
+            <Autoselect
+              selectedTags={selectedTags}
+              setSelectedTags={setSelectedTags}
+            />
+
+            <Box
+              component="textarea"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Enter your prompt here:"
+              rows={4}
+              sx={{
+                width: "100%",
+                backgroundColor: "black",
+                color: "white",
+                border: "1px solid white",
+                borderRadius: "8px",
+                padding: 1,
+                resize: "none",
+              }}
+            />
+
+            <Button
+              variant="outlined"
+              onClick={handleSendRequest}
+              disabled={isLoadingResponse}
+              sx={{
+                alignSelf: "center",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "1px solid white",
+                borderRadius: "8px",
+                paddingX: 4,
+                paddingY: 1,
+                cursor: "pointer",
+                color: "white",
+                "&:hover": {
+                  backgroundColor: "green",
+                },
+                "&:disabled": {
+                  opacity: 0.7,
+                  cursor: "not-allowed",
+                },
+              }}
+            >
+              {isLoadingResponse ? (
+                <>Loading...</>
+              ) : sendState ? (
+                <>
+                  <SendIcon sx={{ marginRight: 1 }} />
+                  Send
+                </>
+              ) : (
+                <>
+                  <ReplayIcon sx={{ marginRight: 1 }} />
+                  Retry
+                </>
+              )}
+            </Button>
+          </Box>
+
           <Box
             sx={{
-              top: 10,
-              right: 10,
-              borderRadius: "5px",
-              padding: 1,
-              margin: 2,
-              fontSize: "0.85rem",
+              marginTop: 4,
+              border: "1px solid white",
+              borderRadius: "8px",
+              backgroundColor: "#1e1e1e",
+              color: "white",
+              overflow: "hidden",
             }}
           >
             <Box
               sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                borderBottom: 1,
-                borderColor: "divider",
+                top: 10,
+                right: 10,
+                borderRadius: "5px",
+                padding: 1,
+                margin: 2,
+                fontSize: "0.85rem",
               }}
             >
-              <Tabs
-                value={activeTab}
-                onChange={(_, newValue) => setActiveTab(newValue)}
-                textColor="inherit"
-                indicatorColor="primary"
-                aria-label="transcription and notes tabs"
+              <Box
                 sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
                   borderBottom: 1,
                   borderColor: "divider",
                 }}
               >
-                <Tab label="Transcription" />
-                <Tab label="Notes" />
-              </Tabs>
+                <Tabs
+                  value={activeTab}
+                  onChange={(_, newValue) => setActiveTab(newValue)}
+                  textColor="inherit"
+                  indicatorColor="primary"
+                  aria-label="transcription and notes tabs"
+                  sx={{
+                    borderBottom: 1,
+                    borderColor: "divider",
+                  }}
+                >
+                  <Tab label="Transcription" />
+                  <Tab label="Notes" />
+                </Tabs>
 
-              <IconButton
-                onClick={handleCopy}
-                aria-label="copy"
-                sx={{ color: (theme) => theme.palette.common.white }}
-              >
-                <ContentCopyIcon />
-              </IconButton>
+                <IconButton
+                  onClick={handleCopy}
+                  aria-label="copy"
+                  sx={{ color: (theme) => theme.palette.common.white }}
+                >
+                  <ContentCopyIcon />
+                </IconButton>
+              </Box>
+
+              {transcriptionData ? (
+                <>
+                  <Box
+                    sx={{
+                      position: "relative",
+                      paddingX: 1,
+                      paddingY: 2,
+                      overflowY: "auto",
+                    }}
+                  >
+                    {activeTab === 0 && (
+                      <MarkdownText
+                        title="Transcription"
+                        transcription={transcriptionData.transcription}
+                        language={selectedLanguage}
+                        audioFileName={audioFileName}
+                      />
+                    )}
+                    {activeTab === 1 && (
+                      <MarkdownText
+                        title="Notes"
+                        transcription={transcriptionData.notes}
+                        language={selectedLanguage}
+                        audioFileName={audioFileName}
+                      />
+                    )}
+                  </Box>
+
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      width: "100%",
+                      marginTop: 2,
+                    }}
+                  >
+                    <ExportPdfButton
+                      contentToExport={
+                        activeTab === 0
+                          ? transcriptionData.transcription
+                          : transcriptionData.notes
+                      }
+                    />
+                  </Box>
+                </>
+              ) : (
+                <Typography
+                  sx={{
+                    padding: 2,
+                    fontWeight: "bold",
+                    fontStyle: "italic",
+                  }}
+                >
+                  {isLoadingResponse
+                    ? "Loading..."
+                    : "No transcription or notes available."}
+                </Typography>
+              )}
             </Box>
-
-            {transcriptionData ? (
-              <>
-                <Box
-                  sx={{
-                    position: "relative",
-                    paddingX: 1,
-                    paddingY: 2,
-                    overflowY: "auto",
-                  }}
-                >
-                  {activeTab === 0 && (
-                    <MarkdownText
-                      title="Transcription"
-                      transcription={transcriptionData.transcription}
-                      language={selectedLanguage}
-                      audioFileName={audioFileName}
-                    />
-                  )}
-                  {activeTab === 1 && (
-                    <MarkdownText
-                      title="Notes"
-                      transcription={transcriptionData.notes}
-                      language={selectedLanguage}
-                      audioFileName={audioFileName}
-                    />
-                  )}
-                </Box>
-
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    width: "100%",
-                    marginTop: 2,
-                  }}
-                >
-                  <ExportPdfButton
-                    contentToExport={
-                      activeTab === 0
-                        ? transcriptionData.transcription
-                        : transcriptionData.notes
-                    }
-                  />
-                </Box>
-              </>
-            ) : (
-              <Typography
-                sx={{
-                  padding: 2,
-                  fontWeight: "bold",
-                  fontStyle: "italic",
-                }}
-              >
-                {isLoadingResponse
-                  ? "Loading..."
-                  : "No transcription or notes available."}
-              </Typography>
-            )}
           </Box>
-        </Box>
-      </Main>
+        </Main>
+      )}
     </Box>
   );
   console.log("filteredChats.length", filteredChats.length);
