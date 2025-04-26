@@ -164,7 +164,7 @@ export default function PersistentDrawerLeft() {
 
   const [selectedLanguage, setSelectedLanguage] = useState<string>("english");
   const [selectedNotesModel, setSelectedNotesModel] = useState<string>(
-    "deepseek_openrouter_api",
+    "qwen_openrouter_api",
   );
   const [selectedTransModel, setSelectedTransModel] =
     useState<string>("faster_whisper");
@@ -233,7 +233,7 @@ export default function PersistentDrawerLeft() {
       setSelectedLanguage("english");
       setPrompt("");
       setAudioFile(null);
-      setSelectedNotesModel("deepseek_openrouter_api");
+      setSelectedNotesModel("qwen_openrouter_api");
       setSelectedTransModel("faster_whisper");
       setAudioFileName("");
       setSelectedTags([]);
