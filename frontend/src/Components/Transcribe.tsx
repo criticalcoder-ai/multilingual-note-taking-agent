@@ -119,6 +119,7 @@ const languageOptions = [
   { label: "English (Default)", value: "english" },
   { label: "Mandarin (Traditional)", value: "mandarin" },
   { label: "Simplified Chinese", value: "simplified_chinese" },
+  { label: "Cantonese Chinese", value: "cantonese" },
   { label: "French", value: "french" },
   { label: "Spanish", value: "spanish" },
   { label: "Portuguese", value: "portuguese" },
