@@ -140,6 +140,15 @@ const notesModelOptions = [
   { label: "dummy", value: "dummy" },
 ];
 
+const fetchSearchResults = async (query: string) => {
+  console.log("hello from search");
+  if (!query) return [];
+  const res = await api.get(`/api/outputs/search/?search_text=${query}`);
+  const data = res.data;
+  console.log("hello got search data", data);
+  return data;
+};
+
 export default function PersistentDrawerLeft() {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -151,6 +160,7 @@ export default function PersistentDrawerLeft() {
   const [open, setOpen] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
+
   const [selectedLanguage, setSelectedLanguage] = useState<string>("english");
   const [selectedNotesModel, setSelectedNotesModel] = useState<string>(
     "deepseek_openrouter_api",
@@ -186,6 +196,16 @@ export default function PersistentDrawerLeft() {
     },
   });
 
+  const {
+    data: searchSessions,
+    isLoading: searchIsLoading,
+    isError: searchIsErr,
+  } = useQuery({
+    queryKey: ["search", searchTerm],
+    queryFn: () => fetchSearchResults(searchTerm),
+    enabled: searchTerm.length > 0,
+  });
+
   useEffect(() => {
     if (isNewChat) {
       setSessionName("New Session");
@@ -201,6 +221,7 @@ export default function PersistentDrawerLeft() {
       return;
     }
 
+    console.log("sessions.length", sessions.length);
     if (sessions.length > 0 && sessionId) {
       const session = sessions.find(
         (s: Session) => s.id.toString() === sessionId,
@@ -222,9 +243,16 @@ export default function PersistentDrawerLeft() {
     }
   }, [sessions, sessionId, isNewChat]);
 
-  const filteredChats = sessions.filter((session: Session) =>
-    session.session_name.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  console.log("searchTerm.length", searchTerm.length);
+  console.log("searchSessions", searchSessions);
+  console.log("sessions", sessions);
+
+  const filteredChats =
+    searchTerm.length > 0
+      ? searchIsLoading || searchIsErr
+        ? []
+        : searchSessions
+      : sessions;
 
   const handleCopy = async () => {
     if (!transcriptionData) return;
@@ -775,4 +803,5 @@ export default function PersistentDrawerLeft() {
       </Main>
     </Box>
   );
+  console.log("filteredChats.length", filteredChats.length);
 }
