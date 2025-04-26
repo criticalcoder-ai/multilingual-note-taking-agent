@@ -178,11 +178,11 @@ export default function PersistentDrawerLeft() {
     queryFn: async () => {
       const res = await api.get(`/api/audio-sessions/`);
 
-        if (!Array.isArray(res.data)) {
-          throw new Error("Invalid response format: expected array");
-        }
+      if (!Array.isArray(res.data)) {
+        throw new Error("Invalid response format: expected array");
+      }
 
-        return res.data;
+      return res.data;
     },
   });
 
@@ -270,7 +270,6 @@ export default function PersistentDrawerLeft() {
       query_lang: selectedLanguage,
       query_audio_kind: tagsString,
     });
-    
 
     window.alert(`
       Session ID: ${currentSessionId}
@@ -285,11 +284,15 @@ export default function PersistentDrawerLeft() {
     console.log("Sending payload:", formData);
 
     try {
-      const res = await api.post(`/api/transcribe-and-generate-notes?${params.toString()}`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
+      const res = await api.post(
+        `/api/transcribe-and-generate-notes?${params.toString()}`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         },
-      });
+      );
 
       if (res.status === 200) {
         console.log("Request successful:", res.data);
