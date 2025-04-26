@@ -281,7 +281,7 @@ async def transcribe_and_generate_notes(
     return {"transcription": transcription, "notes": notes}
 
 
-@app.get("/api/audio-sessions/new", response_model=int)
+@app.get("/api/audio-sessions/new/", response_model=int)
 async def create_empty_audio_session():
     """
     Create an empty AudioSession with default empty values and return its ID.
