@@ -28,7 +28,7 @@ import TextField from "@mui/material/TextField";
 import InputAdornment from "@mui/material/InputAdornment";
 import SearchIcon from "@mui/icons-material/Search";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Tabs, Tab, Box, CircularProgress } from "@mui/material";
 
 import { copyToClipboard } from "../utils";
@@ -178,6 +178,8 @@ export default function PersistentDrawerLeft() {
   const [isLoadingResponse, setIsLoadingResponse] = useState(false);
   const isNewChat = sessionId === "new";
 
+  const queryClient = useQueryClient();
+
   // API Endpoints:
   const {
     data: sessions = [],
@@ -221,7 +223,7 @@ export default function PersistentDrawerLeft() {
 
       return res.data;
     },
-    enabled: sessionId !== undefined,
+    enabled: sessionId !== undefined && sessionId !== "new",
   });
   console.log("currSession", currSession);
 
@@ -297,7 +299,7 @@ export default function PersistentDrawerLeft() {
 
     if (isNewChat) {
       try {
-        const createRes = await api.get(`/api/audio-sessions/new`);
+        const createRes = await api.get(`/api/audio-sessions/new/`);
         currentSessionId = createRes.data;
         console.log("New session created with ID:", currentSessionId);
       } catch (error) {
@@ -318,15 +320,15 @@ export default function PersistentDrawerLeft() {
       query_audio_kind: tagsString,
     });
 
-    window.alert(`
-      Session ID: ${currentSessionId}
-      Session Name: ${sessionName}
-      File: ${audioFileName}
-      Prompt: ${prompt}
-      Language: ${selectedLanguage}
-      Tags: ${tagsString}
-      Audio Model: ${selectedTransModel}
-      Notes Model: ${selectedNotesModel}`);
+    // window.alert(`
+    //   Session ID: ${currentSessionId}
+    //   Session Name: ${sessionName}
+    //   File: ${audioFileName}
+    //   Prompt: ${prompt}
+    //   Language: ${selectedLanguage}
+    //   Tags: ${tagsString}
+    //   Audio Model: ${selectedTransModel}
+    //   Notes Model: ${selectedNotesModel}`);
 
     console.log("Sending payload:", formData);
 
@@ -348,6 +350,7 @@ export default function PersistentDrawerLeft() {
           notes: res.data.notes || "",
         });
         setSendState(false);
+        queryClient.invalidateQueries({ queryKey: ["audio-sessions"] });
       } else {
         console.error("Unexpected response:", res);
         window.alert("Unexpected error occurred!");
@@ -504,7 +507,7 @@ export default function PersistentDrawerLeft() {
             overflowY: "auto",
           }}
         >
-          {isLoading || true ? (
+          {isLoading ? (
             <CircularProgress
               color="primary"
               sx={{ position: "relative", left: "5rem", top: "1rem" }}
