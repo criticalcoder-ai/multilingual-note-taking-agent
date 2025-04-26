@@ -127,9 +127,9 @@ const languageOptions = [
 ];
 
 const transModelOptions = [
-  { label: "Alibaba ASR (Default)", value: "alibaba_asr_api" },
+  { label: "Faster-Whisper(Default)", value: "faster_whisper" },
+  { label: "Alibaba ASR", value: "alibaba_asr_api" },
   { label: "Whisper", value: "whisper" },
-  { label: "Faster-Whisper", value: "faster_whisper" },
   { label: "dummy", value: "dummy" },
 ];
 
@@ -156,7 +156,7 @@ export default function PersistentDrawerLeft() {
     "deepseek_openrouter_api",
   );
   const [selectedTransModel, setSelectedTransModel] =
-    useState<string>("whisper");
+    useState<string>("faster_whisper");
   const [prompt, setPrompt] = useState<string>("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -193,7 +193,7 @@ export default function PersistentDrawerLeft() {
       setPrompt("");
       setAudioFile(null);
       setSelectedNotesModel("deepseek_openrouter_api");
-      setSelectedTransModel("whisper");
+      setSelectedTransModel("faster_whisper");
       setAudioFileName("");
       setSelectedTags([]);
       setTranscriptionData(null);
@@ -285,7 +285,7 @@ export default function PersistentDrawerLeft() {
 
     try {
       const res = await api.post(
-        `/api/transcribe-and-generate-notes?${params.toString()}`,
+        `/api/transcribe-and-generate-notes/?${params.toString()}`,
         formData,
         {
           headers: {
