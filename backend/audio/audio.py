@@ -31,7 +31,7 @@ def transcribe_with_faster_whisper_batched(
         raise ImportError("torch module is not installed.")
 
     model = WhisperModel(
-        "turbo",
+        "tiny",
         device="cpu",
         compute_type="int8",
     )
