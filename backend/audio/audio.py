@@ -76,7 +76,6 @@ def transcribe_with_faster_whisper_batched(
     print(f"transcribed the mp3 {text=}")
     return text
 
-
 def transcribe_with_whisper(
     path: str, query_lang=None, query_prompt=None, query_audio_kind=None
 ) -> str:
@@ -114,7 +113,6 @@ def transcribe_with_whisper(
     print(f"transcribed the mp3 {text=}")
     return text
 
-
 def transcribe_with_alibaba_asr_api(path: str) -> str:
     load_dotenv()
     appkey = os.getenv("ALIBABA_ASR_APPKEY")
@@ -150,7 +148,6 @@ def transcribe_with_alibaba_asr_api(path: str) -> str:
 
     print(f"transcribed the audio {text=}")
     return text
-
 
 def transcribe_mp3(
     path: str,
